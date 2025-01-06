@@ -78,6 +78,8 @@ impl LruManager {
 }
 
 mod tests{
+    use logfile_parser::parsing_structures::event_sourced::EventSourceLog;
+    use crate::z_filter::z_anon::ZFilter;
     use super::*;
 
     static  Z: usize = 2;
@@ -168,5 +170,38 @@ mod tests{
             } else {
                 assert!(res.is_some());
             }        }
+    }
+
+
+    #[tokio::test]
+    async fn test_in_simulator(){
+        let mut vec = vec![
+            EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("1"), Some(String::from("ac2")), vec!["A".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("2"), Some(String::from("ac2")), vec!["A".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("3"), Some(String::from("ac2")), vec!["A".to_string()], Some(Utc::now())),
+            //--------------------------------------------Source B
+            EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["B".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["B".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["B".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("1"), Some(String::from("ac2")), vec!["B".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("2"), Some(String::from("ac2")), vec!["B".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("3"), Some(String::from("ac2")), vec!["B".to_string()], Some(Utc::now())),
+        ];
+
+        match sourced_simulator::create_default_simulator(
+            ZFilter::new(LruManager::from(Config::new(3,Duration::hours(10))),),
+            EventSourceLog::from(vec)).await{
+            Ok(simulator) => {
+                let res = simulator.run().await;
+                assert_eq!(res.len(), 4);
+
+            }
+            Err(e) => {
+                panic!("{}", e);
+            }
+        }
     }
 }

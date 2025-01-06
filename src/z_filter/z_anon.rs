@@ -33,3 +33,11 @@ impl sourced_simulator::simulator_traits::node_executions::NodeExecutions for ZF
         //not needed, ignore
     }
 }
+
+mod tests{
+    use crate::z_filter::lru_manager::LruManager;
+    #[test]
+    fn test_z_filter() {
+
+    }
+}

@@ -1,0 +1,11 @@
+[package]
+name = "z-anon-impl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+logfile-parser = {path = "/home/fabian/TU_DRESDEN/PrivateMine/SOURCED/logfile-parser"}
+sourced-simulator = {path = "/home/fabian/TU_DRESDEN/PrivateMine/SOURCED/sourced-simulator"}
+async-trait = "0.1.83"
+chrono = "0.4.39"
+tokio = "1.42.0"

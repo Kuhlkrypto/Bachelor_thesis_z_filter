@@ -170,12 +170,12 @@ cython_debug/
 
 #own changes
 
-evaluation/results/
+*/results/
 
-evaluation/results_filtering/
-
-
-evaluation/test_files/
+*/results_filtering/
 
 
-/.idea
+*/test_files/
+
+
+*/.idea

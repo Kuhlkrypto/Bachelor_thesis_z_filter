@@ -1,8 +1,8 @@
-use std::cmp::PartialEq;
 use crate::z_filter::lru_manager::LruManager;
 use async_trait::async_trait;
 use logfile_parser::parsing_structures::event_sourced::EventSource;
 use sourced_simulator::simulator::node_communicator::NodeCommunicator;
+use std::cmp::PartialEq;
 use std::sync::Arc;
 
 
@@ -23,26 +23,21 @@ impl ZFilter {
 }
 
 
-
 #[async_trait]
 impl sourced_simulator::simulator_traits::node_executions::NodeExecutions for ZFilter {
     async fn execute_event_queue_trigger(&mut self, event: EventSource, comm: Arc<NodeCommunicator>) {
         if let Some((case, activity, source, timestamp)) = event.disassemble() {
-            match self.lru_manager.process(case, activity.clone(), timestamp, source) {
-                Some(event) => {
-                    match self.zfiltering_method {
-                        ZFilteringMethod::ClassicZfilter => {
+            if self.lru_manager.process(&case, &activity, &timestamp, &source) {
+                match self.zfiltering_method {
+                    ZFilteringMethod::ClassicZfilter => {
+                        let event = EventSource::new(case, Some(activity), source, Some(timestamp));
+                        comm.publish_to_collector_event(event).await;
+                    }
+                    ZFilteringMethod::ImprovedZfilter => {
+                        while let Some(event) = self.lru_manager.release_other_entries(&activity) {
                             comm.publish_to_collector_event(event).await;
                         }
-                        ZFilteringMethod::ImprovedZfilter => {
-                            while let Some(event) = self.lru_manager.release_other_entries(&activity) {
-                                comm.publish_to_collector_event(event).await;
-                            }
-                        }
                     }
-                }
-                None => {
-                    //ignore
                 }
             }
         }
@@ -54,11 +49,11 @@ impl sourced_simulator::simulator_traits::node_executions::NodeExecutions for ZF
 }
 
 mod tests {
-    use chrono::{Duration, Utc};
-    use logfile_parser::parsing_structures::event_sourced::{EventSource, EventSourceLog};
     use crate::z_filter::config::Config;
     use crate::z_filter::lru_manager::LruManager;
     use crate::z_filter::z_anon::{ZFilter, ZFilteringMethod};
+    use chrono::{Duration, Utc};
+    use logfile_parser::parsing_structures::event_sourced::{EventSource, EventSourceLog};
 
     #[tokio::test]
     async fn test_z_filter() {
@@ -79,11 +74,11 @@ mod tests {
         ];
 
         match sourced_simulator::create_default_simulator(
-            ZFilter::new(LruManager::from(Config::new(3,Duration::hours(10))), ZFilteringMethod::ImprovedZfilter),
-            EventSourceLog::from(vec.clone())).await{
+            ZFilter::new(LruManager::from(Config::new(3, Duration::hours(10))), ZFilteringMethod::ImprovedZfilter),
+            EventSourceLog::from(vec.clone())).await {
             Ok(simulator) => {
                 let res = simulator.run().await;
-                println!("{}", res.len());
+                assert_eq!(res.len(), 6);
             }
             Err(e) => {
                 panic!("{}", e);

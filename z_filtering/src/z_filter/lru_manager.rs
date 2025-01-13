@@ -4,6 +4,7 @@ use crate::z_filter::lru_entry::LRUEntry;
 use chrono::{DateTime, Duration, Utc};
 use logfile_parser::parsing_structures::event_sourced::EventSource;
 use std::collections::{HashMap, VecDeque};
+use sourced_simulator::simulator_traits::r_event::Event;
 
 #[derive(Debug, Clone)]
 pub struct LruManager {
@@ -18,27 +19,18 @@ impl LruManager {
         Self { cache: HashMap::new(), users: HashMap::new(), max_users, max_age }
     }
 
+
     pub fn from(config: Config) -> Self {
         Self::new(config.max_users, config.max_age)
     }
 
-    pub fn process_event(&mut self, event: EventSource) -> Option<EventSource> {
-        if let Some((case, activity, source, timestamp)) = event.disassemble() {
-            //TODO umstellen
-            self.process(case, activity, timestamp, source)
-        } else {
-            None
-        }
-    }
-
-    pub fn process(&mut self, case: String, activity: String, timestamp: DateTime<Utc>, source: Vec<String>) -> Option<EventSource> {
+    pub fn process(&mut self, case: &String, activity: &String, timestamp: &DateTime<Utc>, source: &Vec<String>) -> bool {
         //check whether attribute is in hashmap, create a new entry if not
-        let lru = self.cache.entry(Attribute::new(&activity)).or_insert(VecDeque::new());
-        let users = self.users.entry(Attribute::new(&activity)).or_insert(0);
-        Self::check_user(lru, users, &case, &timestamp, &source);
-        Self::evict_old_users(lru, users, &timestamp, &self.max_age);
-
-        Self::exceed_z(lru,users, self.max_users, case, activity, source, timestamp)
+        let lru = self.cache.entry(Attribute::new(activity)).or_insert(VecDeque::new());
+        let users = self.users.entry(Attribute::new(activity)).or_insert(0);
+        Self::check_user(lru, users, case, timestamp, source);
+        Self::evict_old_users(lru, users, timestamp, &self.max_age);
+        *users as usize >= self.max_users
     }
 
     fn check_user(lru: &mut VecDeque<LRUEntry>, users: &mut u32, user: &String, timestamp: &DateTime<Utc>, source: &Vec<String>) {
@@ -99,6 +91,7 @@ mod tests{
     use crate::z_filter::z_anon::{ZFilter, ZFilteringMethod};
     use super::*;
 
+
     static  Z: usize = 2;
     fn init_event_source(a: String, u: String) -> EventSource{
         EventSource::new(
@@ -123,7 +116,11 @@ mod tests{
         let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)));
 
         for e in res{
-            assert!(lru.process_event(e).is_none());
+            if let Some((case, activity, source, timestamp)) = e.disassemble() {
+                assert_eq!(lru.process(&case, &activity, &timestamp, &source), false);
+            } else {
+                assert!(false);
+            }
         }
     }
 
@@ -136,7 +133,9 @@ mod tests{
         }
         let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)));
         for e in vec{
-            assert!(lru.process_event(e).is_none());
+            if let Some((case, activity, source, timestamp)) = e.disassemble() {
+                assert_eq!(lru.process(&case, &activity, &timestamp, &source), false);
+            }
         }
     }
 
@@ -149,12 +148,17 @@ mod tests{
         }
         let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)));
         for (i,e) in vec.into_iter().enumerate(){
-            let res = lru.process_event(e);
-            println!("{:?}", res);
-            if i < Z -1{
-            assert!(res.is_none());
+            let result;
+            if let Some((case, activity, source, timestamp)) = e.disassemble(){
+                result = lru.process(&case, &activity, &timestamp, &source);
             } else {
-                assert!(res.is_some());
+                assert!(false);
+                return;
+            }
+            if i < Z -1{
+                assert_eq!(result, false);
+            } else {
+                assert_eq!(result, true);
             }
         }
     }
@@ -168,7 +172,11 @@ mod tests{
         vec.push(EventSource::new(String::from("lol"), Some(user.clone()), vec![], Some(Utc::now() + Duration::hours(10))));
         let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)));
         for e in vec.into_iter(){
-            assert!(lru.process_event(e).is_none());
+            if let Some((case, activity, source, timestamp)) = e.disassemble() {
+                assert_eq!(lru.process(&case, &activity, &timestamp, &source), false)
+            }else {
+                assert!(false);
+            }
         }
 
     }
@@ -181,12 +189,17 @@ mod tests{
         vec.push(EventSource::new(String::from("lol"), Some(user.clone()), vec![], Some(Utc::now() + Duration::hours(9))));
         let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)));
         for (i,e) in vec.into_iter().enumerate(){
-            let res = lru.process_event(e);
+            if let Some((case, activity, source, timestamp)) = e.disassemble() {
+                let res = lru.process(&case, &activity, &timestamp, &source);
+
             if i == 0{
-                assert!(res.is_none());
+                assert_eq!(res, false);
             } else {
-                assert!(res.is_some());
-            }        }
+                assert_eq!(res, true);
+            }
+            }
+
+        }
     }
 
 

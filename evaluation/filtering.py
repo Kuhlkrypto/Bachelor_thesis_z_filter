@@ -3,7 +3,8 @@ import subprocess
 
 
 def filter_log(log_path, z, t):
-    binary_arg = os.path.join("/home/fabian/TU_DRESDEN/Bachelorarbeit/pm4py_test/z-anon-impl/target/release/z-anon-impl")
+    print("Start")
+    binary_arg = os.path.join("/home/fabian/Github/Bachelor_thesis_z_filter/z_filtering/target/release/z-anon-impl")
 
     try:
         res = subprocess.run(
@@ -20,3 +21,5 @@ def filter_log(log_path, z, t):
     except subprocess.CalledProcessError as e:
         print(f"Raised error{e.stderr}")
         exit(1)
+
+filter_log("/home/fabian/TU_DRESDEN/PrivateMine/SOURCED/data/Sepsis_Cases-Event_Log.xes", 1, "3600h")

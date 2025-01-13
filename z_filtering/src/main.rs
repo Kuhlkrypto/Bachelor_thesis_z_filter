@@ -10,13 +10,13 @@ use std::process::exit;
 
 use crate::z_filter::config::Config;
 use crate::z_filter::lru_manager::LruManager;
-use crate::z_filter::z_anon::ZFilter;
+use crate::z_filter::z_anon::{ZFilter, ZFilteringMethod};
 
 ///executable for testing greater logfiles
 
 async fn kickoff(log: EventSourceLog, config: Config) -> Result<Vec<EventSource>, Error> {
      match sourced_simulator::create_default_simulator(
-        ZFilter::new(LruManager::from(config),),
+        ZFilter::new(LruManager::from(config), ZFilteringMethod::ClassicZfilter),
         log).await{
          Ok(simulator) => {
              Ok(simulator.run().await)

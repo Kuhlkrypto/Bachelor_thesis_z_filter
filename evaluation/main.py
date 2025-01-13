@@ -34,25 +34,23 @@ def cleanup_logs(path, depth=0):
 
 def main(orig_path):
     # Dictionary to store quality metrics
-    quality_dict = ms.init_dict()
-    result_path = '/home/fabian/TU_DRESDEN/Bachelorarbeit/pm4py_test/pythonProject/results_filtering'
+    result_path = '/home/fabian/Github/Bachelor_thesis_z_filter/evaluation/results_filtering'
     # path to original event log
     base_name = os.path.basename(orig_path)
     base_name = base_name.removesuffix('.xes')
-    # Log to compare to
-    orig_log = pm4py.read_xes(orig_path)
+
+    meas = ms.Measurement(result_path)
+    meas.set_unfiltered_log(orig_path)
 
     # Directory with filtered event logs
     path = f"{result_path}/{base_name}/"
-    comp.walk_dir(path, orig_log, quality_dict)
 
     # Plot the quality metrics
-    printer.plot_quality_metrics(quality_dict, result_path, base_name)
-    printer.hashmap_to_csv(quality_dict, result_path, base_name)
+    # printer.plot_quality_metrics(quality_dict, result_path, base_name)
 
 
 if __name__ == "__main__":
     path = "/home/fabian/TU_DRESDEN/PrivateMine/SOURCED/data/Sepsis_Cases-Event_Log.xes"
-    cleanup_logs("/home/fabian/TU_DRESDEN/Bachelorarbeit/pm4py_test/pythonProject/results_filtering")
+    # cleanup_logs("/home/fabian/TU_DRESDEN/Bachelorarbeit/pm4py_test/pythonProject/results_filtering")
     filter_z_range(path, "3600s", [1])
-    main(path)
+    # main(path)

@@ -14,9 +14,9 @@ use crate::z_filter::z_anon::{ZFilter, ZFilteringMethod};
 
 ///executable for testing greater logfiles
 
-async fn kickoff(log: EventSourceLog, config: Config) -> Result<Vec<EventSource>, Error> {
+async fn kickoff(log: EventSourceLog, config: Config, filter_method: ZFilteringMethod) -> Result<Vec<EventSource>, Error> {
      match sourced_simulator::create_default_simulator(
-        ZFilter::new(LruManager::from(config), ZFilteringMethod::ClassicZfilter),
+        ZFilter::new(LruManager::from(config), filter_method),
         log).await{
          Ok(simulator) => {
              Ok(simulator.run().await)
@@ -41,12 +41,28 @@ fn help_parse(arg: Option<String>) -> u32 {
 }
 
 
-fn preprocess_args(mut args: Vec<String>) -> (String, u32, Duration) {
-    if args.len() != 4 {
+fn preprocess_args(mut args: Vec<String>) -> (String, u32, Duration, ZFilteringMethod) {
+    if args.len() != 5 {
         eprintln!("Error: wrong number of arguments");
-        eprintln!("Usage: {} <file> <z-value> <delta t>", args[0]);
+        eprintln!("Usage: {} <file> <z-value> <delta t> <Filter_method: 0-classic (default), !=0 -improved>", args[0]);
         exit(1);
     }
+
+    // Filtering Method
+    // safe unwrap due to first if-clause
+    let filter_method = match str::parse::<i32>(&args.pop().unwrap()){
+        Ok(value) => {
+            if value == 0{
+                ZFilteringMethod::ClassicZfilter
+            }else {
+                ZFilteringMethod::ImprovedZfilter
+            }
+        }
+        Err(_) => {
+            ZFilteringMethod::ClassicZfilter
+        }
+    };
+
 
     let res = parse_duration(&args.pop().unwrap());
     if let Err(e) = res {
@@ -59,7 +75,7 @@ fn preprocess_args(mut args: Vec<String>) -> (String, u32, Duration) {
     let z = help_parse(args.pop());
     let path = args.pop().unwrap(); //safe unwrap
 
-    (path, z, t)
+    (path, z, t, filter_method)
 }
 
 fn parse_duration(input: &str) -> Result<Duration, String> {
@@ -101,13 +117,13 @@ fn excert_base_name(path: Box<&Path>) -> String {
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
     let args: Vec<String> = env::args().collect();
-    let (path, z, t) = preprocess_args(args);
+    let (path, z, t, filter_method) = preprocess_args(args);
     println!("Z: {}, t: {}, Path: {}", z, t, path);
     let file_name = excert_base_name(Box::new(Path::new(&path)));
     eprintln!("{}", file_name);
     let result_folder = "results_filtering/".to_string() + &file_name;
     if let Some(log) = logfile_parser::parse_any_known_file(path.as_str()) {
-        match kickoff(log, Config::new(z as usize, t)).await {
+        match kickoff(log, Config::new(z as usize, t), filter_method).await {
             Ok(log) => {
                 let a = EventSourceLog::from(log);
                 a.print_to_csv(&result_folder, &((file_name + "Z" + &z.to_string()).to_string() + t.to_string().as_str()));
@@ -123,4 +139,13 @@ async fn main() {
     }
 
 
+}
+
+
+#[test]
+fn test_read_from_csv(){
+    let res = EventSourceLog::read_from_csv("/home/fabian/Github/Bachelor_thesis_z_filter/evaluation/results_filtering/Sepsis_Cases-Event_Log/Sepsis_Cases-Event_LogZ1PT3600S.csv");
+    let res = res.unwrap().get_log_own();
+
+    println!("{:?}", res.len());
 }

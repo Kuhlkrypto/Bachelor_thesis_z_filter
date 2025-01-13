@@ -4,7 +4,6 @@ use crate::z_filter::lru_entry::LRUEntry;
 use chrono::{DateTime, Duration, Utc};
 use logfile_parser::parsing_structures::event_sourced::EventSource;
 use std::collections::{HashMap, VecDeque};
-use sourced_simulator::simulator_traits::r_event::Event;
 
 #[derive(Debug, Clone)]
 pub struct LruManager {
@@ -54,6 +53,7 @@ impl LruManager {
             if *current_time - entry.timestamp > *max_age {
                 //remove oldest users if exceeding threshold
                 let _ = lru.pop_back();
+                //None is possible in the improved Variation
                 *users -= 1;
             } else {
                 break;

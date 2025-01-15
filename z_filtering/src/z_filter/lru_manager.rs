@@ -4,7 +4,7 @@ use crate::z_filter::lru_entry::LRUEntry;
 use chrono::{DateTime, Duration, Utc};
 use logfile_parser::parsing_structures::event_sourced::EventSource;
 use std::collections::{HashMap, VecDeque};
-use crate::z_filter::z_anon::{ZFilter, ZFilteringMethod};
+use crate::z_filter::z_anon::{ ZFilteringMethod};
 
 #[derive(Debug, Clone)]
 pub struct LruManager {
@@ -32,12 +32,12 @@ impl LruManager {
         match self.zfiltering_method {
             ZFilteringMethod::ClassicZfilter => {
                 Self::check_user(lru, users, case, timestamp, source);
-                Self::evict_old_users(lru, users, case, timestamp, &self.max_age);
+                Self::evict_old_users(lru, users, timestamp, &self.max_age);
                 lru.len() >= self.max_users
             }
             ZFilteringMethod::ImprovedZfilter => {
                 Self::check_user_improved(lru, users, case, timestamp, source);
-                Self::evict_old_users_improved(lru, users, case, timestamp, &self.max_age);
+                Self::evict_old_users_improved(lru, users, timestamp, &self.max_age);
                 *users as usize >= self.max_users
             }
         }
@@ -73,7 +73,7 @@ impl LruManager {
         }
     }
 
-    fn evict_old_users_improved(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, user: &String, current_time: &DateTime<Utc>, max_age: &Duration){
+    fn evict_old_users_improved(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, current_time: &DateTime<Utc>, max_age: &Duration){
         while let Some(entry) = lru.back() {
             if *current_time - entry.timestamp > *max_age {
                 let user = entry.user.clone();
@@ -87,7 +87,7 @@ impl LruManager {
             }
         }
     }
-    fn evict_old_users(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, user: &String, current_time: &DateTime<Utc>, max_age: &Duration) {
+    fn evict_old_users(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, current_time: &DateTime<Utc>, max_age: &Duration) {
         // nach der Logik des Programms treffen die Events in aufsteigender Zeit-Reihenfolge hier ein, daher muss man nur
         //von hinten alle entries entfernen die zu alt sind
         while let Some(entry) = lru.back() {
@@ -118,6 +118,7 @@ impl LruManager {
     }
 }
 
+    #[allow(unused_imports, dead_code)]
 mod tests{
     use logfile_parser::parsing_structures::event_sourced::EventSourceLog;
     use crate::z_filter::z_anon::{ZFilter, ZFilteringMethod};
@@ -237,7 +238,7 @@ mod tests{
 
     #[tokio::test]
     async fn test_in_simulator(){
-        let mut vec = vec![
+        let vec = vec![
             EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
             EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
             EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),

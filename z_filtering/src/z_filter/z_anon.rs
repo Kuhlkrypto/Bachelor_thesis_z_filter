@@ -48,6 +48,7 @@ impl sourced_simulator::simulator_traits::node_executions::NodeExecutions for ZF
     }
 }
 
+    #[allow(unused_imports, dead_code)]
 mod tests {
     use crate::z_filter::config::Config;
     use crate::z_filter::lru_manager::LruManager;
@@ -57,7 +58,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_z_filter() {
-        let mut vec = vec![
+        let vec = vec![
             EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
             EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
             EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
@@ -88,7 +89,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_z_time_improved(){
-        let mut vec = vec![
+        let vec = vec![
         EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
         EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
         EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),

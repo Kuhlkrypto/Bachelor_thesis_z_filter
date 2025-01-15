@@ -1,11 +1,11 @@
 mod z_filter;
 
-use chrono::{Duration, Utc};
+use chrono::Duration;
 
 use logfile_parser::parsing_structures::event_sourced::{EventSource, EventSourceLog};
-use std::path::{Path, PathBuf};
 use std::env;
 use std::io::Error;
+use std::path::Path;
 use std::process::exit;
 
 use crate::z_filter::config::Config;
@@ -15,16 +15,16 @@ use crate::z_filter::z_anon::{ZFilter, ZFilteringMethod};
 ///executable for testing greater logfiles
 
 async fn kickoff(log: EventSourceLog, config: Config, filter_method: ZFilteringMethod) -> Result<Vec<EventSource>, Error> {
-     match sourced_simulator::create_default_simulator(
+    match sourced_simulator::create_default_simulator(
         ZFilter::new(LruManager::from(config, filter_method.clone()), filter_method),
-        log).await{
-         Ok(simulator) => {
-             Ok(simulator.run().await)
-         }
-         Err(e) => {
-             Err(e)
-         }
-     }
+        log).await {
+        Ok(simulator) => {
+            Ok(simulator.run().await)
+        }
+        Err(e) => {
+            Err(e)
+        }
+    }
 }
 
 
@@ -50,11 +50,11 @@ fn preprocess_args(mut args: Vec<String>) -> (String, u32, Duration, ZFilteringM
 
     // Filtering Method
     // safe unwrap due to first if-clause
-    let filter_method = match str::parse::<i32>(&args.pop().unwrap()){
+    let filter_method = match str::parse::<i32>(&args.pop().unwrap()) {
         Ok(value) => {
-            if value == 0{
+            if value == 0 {
                 ZFilteringMethod::ClassicZfilter
-            }else {
+            } else {
                 ZFilteringMethod::ImprovedZfilter
             }
         }
@@ -79,23 +79,22 @@ fn preprocess_args(mut args: Vec<String>) -> (String, u32, Duration, ZFilteringM
 }
 
 fn parse_duration(input: &str) -> Result<Duration, String> {
-
     let (value, unit) = input.split_at(input.len() - 1);
     let value: u64 = value.parse().map_err(|_| "Invalid Number".to_string())?;
 
     match unit {
         "s" => {
             Ok(Duration::seconds(value as i64))
-        },
+        }
         "m" => {
             Ok(Duration::minutes(value as i64))
-        },
+        }
         "h" => {
             Ok(Duration::hours(value as i64))
-        },
+        }
         "d" => {
             Ok(Duration::days(value as i64))
-        },
+        }
         _ => {
             Ok(Duration::seconds(value as i64))
         }
@@ -136,14 +135,14 @@ async fn main() {
     let (path_file, z, t, filter_method) = preprocess_args(args);
     let mut result_folder = Path::new(&path_file);
     result_folder = result_folder.parent().unwrap();
-    let mut result_folder = result_folder.join("results_filtering_".to_string() + match filter_method {
+    let result_folder = result_folder.join("results_filtering_".to_string() + match filter_method {
         ZFilteringMethod::ClassicZfilter => "classic",
         ZFilteringMethod::ImprovedZfilter => "improved",
     } + "/");
     println!("Z: {}, t: {}, Path: {:?}", z, t, path_file);
     let file_name = excert_base_name(Box::new(Path::new(&path_file)));
     eprintln!("{}", file_name);
-    match  EventSourceLog::read_from_csv(&path_file) {
+    match EventSourceLog::read_from_csv(&path_file) {
         Ok(log) => {
             match kickoff(log, Config::new(z as usize, t), filter_method).await {
                 Ok(mut log) => {
@@ -158,13 +157,12 @@ async fn main() {
             }
         }
         Err(e) => eprintln!("Error: {}", e),
-
     }
 }
 
 
 #[test]
-fn test_read_from_csv(){
+fn test_read_from_csv() {
     let res = EventSourceLog::read_from_csv("/home/fabian/Github/Bachelor_thesis_z_filter/evaluation/results_filtering/Sepsis_Cases-Event_Log/Sepsis_Cases-Event_LogZ1PT3600S.csv");
     let res = res.unwrap().get_log_own();
 

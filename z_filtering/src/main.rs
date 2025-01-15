@@ -1,9 +1,9 @@
 mod z_filter;
 
-use chrono::Duration;
+use chrono::{Duration, Utc};
 
 use logfile_parser::parsing_structures::event_sourced::{EventSource, EventSourceLog};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::env;
 use std::io::Error;
 use std::process::exit;
@@ -16,7 +16,7 @@ use crate::z_filter::z_anon::{ZFilter, ZFilteringMethod};
 
 async fn kickoff(log: EventSourceLog, config: Config, filter_method: ZFilteringMethod) -> Result<Vec<EventSource>, Error> {
      match sourced_simulator::create_default_simulator(
-        ZFilter::new(LruManager::from(config), filter_method),
+        ZFilter::new(LruManager::from(config, filter_method.clone()), filter_method),
         log).await{
          Ok(simulator) => {
              Ok(simulator.run().await)
@@ -113,32 +113,53 @@ fn excert_base_name(path: Box<&Path>) -> String {
 }
 
 
+async fn sort_log(events: &mut Vec<EventSource>) {
+    events.sort_by(|a, b| {
+        match a.get_case_id().parse::<u32>().unwrap().cmp(&b.get_case_id().parse::<u32>().unwrap()) {
+            std::cmp::Ordering::Equal => {
+                match (&a.get_timestamp(), &b.get_timestamp()) {
+                    (Some(a), Some(b)) => a.cmp(&b),
+                    (None, Some(_)) => std::cmp::Ordering::Less,
+                    (Some(_), None) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            }
+            other => other,
+        }
+    });
+}
+
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
     let args: Vec<String> = env::args().collect();
-    let (path, z, t, filter_method) = preprocess_args(args);
-    println!("Z: {}, t: {}, Path: {}", z, t, path);
-    let file_name = excert_base_name(Box::new(Path::new(&path)));
+    let (path_file, z, t, filter_method) = preprocess_args(args);
+    let mut result_folder = Path::new(&path_file);
+    result_folder = result_folder.parent().unwrap();
+    let mut result_folder = result_folder.join("results_filtering_".to_string() + match filter_method {
+        ZFilteringMethod::ClassicZfilter => "classic",
+        ZFilteringMethod::ImprovedZfilter => "improved",
+    } + "/");
+    println!("Z: {}, t: {}, Path: {:?}", z, t, path_file);
+    let file_name = excert_base_name(Box::new(Path::new(&path_file)));
     eprintln!("{}", file_name);
-    let result_folder = "results_filtering/".to_string() + &file_name;
-    if let Some(log) = logfile_parser::parse_any_known_file(path.as_str()) {
-        match kickoff(log, Config::new(z as usize, t), filter_method).await {
-            Ok(log) => {
-                let a = EventSourceLog::from(log);
-                a.print_to_csv(&result_folder, &((file_name + "Z" + &z.to_string()).to_string() + t.to_string().as_str()));
-            }
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                exit(1);
+    match  EventSourceLog::read_from_csv(&path_file) {
+        Ok(log) => {
+            match kickoff(log, Config::new(z as usize, t), filter_method).await {
+                Ok(mut log) => {
+                    sort_log(&mut log).await;
+                    let a = EventSourceLog::from(log);
+                    a.print_to_csv(<&str>::try_from(result_folder.as_os_str()).unwrap(), &((file_name + "Z" + &z.to_string()).to_string() + t.to_string().as_str()));
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    exit(1);
+                }
             }
         }
+        Err(e) => eprintln!("Error: {}", e),
 
-    } else {
-        exit(1);
     }
-
-
 }
 
 

@@ -6,7 +6,7 @@ use std::cmp::PartialEq;
 use std::sync::Arc;
 
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum ZFilteringMethod {
     ClassicZfilter,
     ImprovedZfilter,
@@ -31,11 +31,11 @@ impl sourced_simulator::simulator_traits::node_executions::NodeExecutions for ZF
                 match self.zfiltering_method {
                     ZFilteringMethod::ClassicZfilter => {
                         let event = EventSource::new(case, Some(activity), source, Some(timestamp));
-                        comm.publish_to_collector_event(event).await;
+                        comm.publish_to_collector(event).await;
                     }
                     ZFilteringMethod::ImprovedZfilter => {
-                        while let Some(event) = self.lru_manager.release_other_entries(&activity) {
-                            comm.publish_to_collector_event(event).await;
+                        for event in  self.lru_manager.release_other_entries(&activity) {
+                            comm.publish_to_collector(event.to_event_source(activity.clone())).await;
                         }
                     }
                 }
@@ -74,7 +74,7 @@ mod tests {
         ];
 
         match sourced_simulator::create_default_simulator(
-            ZFilter::new(LruManager::from(Config::new(3, Duration::hours(10))), ZFilteringMethod::ImprovedZfilter),
+            ZFilter::new(LruManager::from(Config::new(3, Duration::hours(10)), ZFilteringMethod::ImprovedZfilter), ZFilteringMethod::ImprovedZfilter),
             EventSourceLog::from(vec.clone())).await {
             Ok(simulator) => {
                 let res = simulator.run().await;
@@ -85,4 +85,40 @@ mod tests {
             }
         }
     }
+
+    #[tokio::test]
+    async fn test_z_time_improved(){
+        let mut vec = vec![
+        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
+        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
+        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(10))),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(10))),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(10))),
+        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(21))),
+        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(21))),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(21))),
+
+        ];
+
+
+        match sourced_simulator::create_default_simulator(
+            ZFilter::new(LruManager::from(Config::new(2, Duration::hours(10)), ZFilteringMethod::ImprovedZfilter), ZFilteringMethod::ImprovedZfilter),
+            EventSourceLog::from(vec.clone())).await {
+            Ok(simulator) => {
+                let res = simulator.run().await;
+                assert_eq!(res.len(), 8);
+            }
+            Err(e) => {
+                panic!("{}", e);
+            }
+        }
+
+
+    }
+
+
+
 }

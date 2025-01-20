@@ -1,7 +1,12 @@
+import os
+
+import pm4py.privacy
 from scipy.spatial.distance import cosine
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+
+from evaluation.measurement import Measurement
 
 
 def similarity_jaccard(record1, record2):
@@ -252,6 +257,25 @@ def calculate_trace_uniqueness(event_log, points_per_trace):
 # event_log = pd.DataFrame(data)
 
 
+def sim(trace1, trace2):
+
+    return similarity_jaccard(trace1, trace2)
+def calc_sparsity(log):
+    trace_dict = defaultdict(list)
+    for _, row in log.iterrows():
+        trace_dict[row['case_id']].append((row['activity'], row['timestamp']))
+
+    sim_l = []
+    for case_id, trace in trace_dict.items():
+        for case_id2, trace2 in trace_dict.items():
+            if case_id2 != case_id:
+
+                sim_l.append(sim(trace, trace2))
+    # sim_l = [x for x in sim_l if x > 0.4]
+    print(sum(sim_l)/len(sim_l))
+
+
+
 
 def start2(event_log):
     event_log = event_log[["case_id", "activity", "timestamp"]].copy()
@@ -269,10 +293,26 @@ def start2(event_log):
 
 if __name__ == "__main__":
     from compute import import_csv
-    path1 = "/home/fabian/Github/Bachelor_thesis_z_filter/evaluation/results_filtering/Sepsis_Cases-Event_Log/Sepsis_Cases-Event_LogZ1PT3600S.csv"
+    path1 = "/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/Sepsis Cases - Event Log/Sepsis Cases - Event Log.csv"
     frame = import_csv(path1)
+    # ms = Measurement("")
+
+    for root, dirs, files in os.walk("/data/data_csv"):
+        for file in files:
+            p = os.path.join(root, file)
+            if os.path.isfile(p) and file.endswith(".csv"):
+                print(p)
+                log = import_csv(p)
+                try:
+                    calc_sparsity(log)
+                except ZeroDivisionError as _:
+                    print("lol")
+
+    # calc_sparsity(frame)
+    # ms.calculate_aecs(frame, ["activity", "case_id"])
+    # print(calculate_trace_uniqueness(frame, 1))
     print(path1)
-    start2(frame)
+    # acf(frame)
     # method1(frame)
     # path1 = "/home/fabian/Github/Bachelor_thesis_z_filter/evaluation/results_filtering/Sepsis_Cases-Event_Log/Sepsis_Cases-Event_LogZ10PT3600S.csv"
     # frame = import_csv(path1)

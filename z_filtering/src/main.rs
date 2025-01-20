@@ -79,6 +79,9 @@ fn preprocess_args(mut args: Vec<String>) -> (String, u32, Duration, ZFilteringM
 }
 
 fn parse_duration(input: &str) -> Result<Duration, String> {
+    if input == "inf"{
+        return Ok(Duration::seconds(i64::MAX));
+    }
     let (value, unit) = input.split_at(input.len() - 1);
     let value: u64 = value.parse().map_err(|_| "Invalid Number".to_string())?;
 
@@ -116,16 +119,17 @@ async fn sort_log(events: &mut Vec<EventSource>) {
     events.sort_by(|a, b| {
         match a.get_case_id().parse::<u32>().unwrap().cmp(&b.get_case_id().parse::<u32>().unwrap()) {
             std::cmp::Ordering::Equal => {
-                match (&a.get_timestamp(), &b.get_timestamp()) {
-                    (Some(a), Some(b)) => a.cmp(&b),
-                    (None, Some(_)) => std::cmp::Ordering::Less,
-                    (Some(_), None) => std::cmp::Ordering::Greater,
-                    (None, None) => std::cmp::Ordering::Equal,
-                }
+                a.get_timestamp().cmp(b.get_timestamp())
             }
             other => other,
         }
     });
+}
+
+async fn sort_by_timestamp(events: &mut Vec<EventSource>) {
+    events.sort_by(|a, b| {
+        a.get_timestamp().cmp(b.get_timestamp())
+    })
 }
 
 
@@ -143,12 +147,15 @@ async fn main() {
     let file_name = excert_base_name(Box::new(Path::new(&path_file)));
     eprintln!("{}", file_name);
     match EventSourceLog::read_from_csv(&path_file) {
-        Ok(log) => {
+        Ok(mut log) => {
+            sort_by_timestamp(log.get_log_mut()).await;
             match kickoff(log, Config::new(z as usize, t), filter_method).await {
                 Ok(mut log) => {
                     sort_log(&mut log).await;
                     let a = EventSourceLog::from(log);
-                    a.print_to_csv(<&str>::try_from(result_folder.as_os_str()).unwrap(), &((file_name + "Z" + &z.to_string()).to_string() + t.to_string().as_str()));
+                    if a.get_log().len() > 0{
+                        a.print_to_csv(<&str>::try_from(result_folder.as_os_str()).unwrap(), &((file_name + "Z" + &z.to_string()).to_string() + t.to_string().as_str()));
+                    }
                 }
                 Err(e) => {
                     eprintln!("Error: {}", e);
@@ -160,11 +167,3 @@ async fn main() {
     }
 }
 
-
-#[test]
-fn test_read_from_csv() {
-    let res = EventSourceLog::read_from_csv("/home/fabian/Github/Bachelor_thesis_z_filter/evaluation/results_filtering/Sepsis_Cases-Event_Log/Sepsis_Cases-Event_LogZ1PT3600S.csv");
-    let res = res.unwrap().get_log_own();
-
-    println!("{:?}", res.len());
-}

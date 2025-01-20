@@ -1,5 +1,9 @@
 import csv
-from priv_metrik import calculate_sparsity
+import os
+
+import pandas.errors
+
+import compute
 
 import pm4py
 from pm4py.algo.evaluation.simplicity.algorithm import EXTENDED_CARDOSO, EXTENDED_CYCLOMATIC
@@ -17,7 +21,8 @@ from pm4py.algo.evaluation.precision import variants
 from pm4py.visualization.bpmn import visualizer as bpmn_visualizer
 
 from compute import import_csv
-
+from csv2auto import convert_csv2auto as csv2auto
+from re_ident import risk_re_ident_quant
 
 class Measurement:
 
@@ -28,45 +33,46 @@ class Measurement:
 
     def init_dict(self):
         return {
+            "Z": [],
+            "dT": [],
             "Fitness": [],
             "Precision": [],
             "Generality": [],
             "Simplicity": [],
-            "Simplicity_EXTENDED_CARDOSO": [],
-            "Simplicity_EXTENDED_CYCLOMATIC": [],
-            "AECS": []
+            "RISK_A": [],
+            "RISK_E": [],
         }
 
     def set_unfiltered_log(self, path):
-        #TODO: just parse the xes log using the rust parser into a csv file and then compute the qualities, don't user the simulator
+        # TODO: just parse the xes log using the rust parser into a csv file and then compute the qualities, don't user the simulator
         log = pm4py.read_xes(path)
         self.unfiltered_log = log
 
-    def fitness(self, event_log, net, initial_m, final_m, z_val, dt_val):
+    def fitness(self, event_log, net, initial_m, final_m):
         fitness = replay_fitness_algorithm.apply(event_log,
                                                  net,
                                                  initial_m,
                                                  final_m,
                                                  variant=replay_fitness_algorithm.Variants.TOKEN_BASED)
         print(f"fitness: {fitness}")
-        self.quality_dict["Fitness"].append((z_val, dt_val, fitness['log_fitness']))
+        self.quality_dict["Fitness"].append(fitness['log_fitness'])
 
-    def simplicity(self, net, z_val, dt_val):
+    def simplicity(self, net):
         simplicity = simplicity_algorithm.apply(net)
         print(f"simplicity: {simplicity}")
-        self.quality_dict["Simplicity"].append((z_val, dt_val, simplicity))
+        self.quality_dict["Simplicity"].append(simplicity)
 
-    def precision(self, event_log, net, im, fm, z_val, dt_val):
+    def precision(self, event_log, net, im, fm):
         precision = precision_algorithm.apply(event_log, net, im, fm, variant=variants.etconformance_token)
         print(f"Precision: {precision}")
-        self.quality_dict["Precision"].append((z_val, dt_val, precision))
+        self.quality_dict["Precision"].append(precision)
 
-    def generality(self, event_log, net, im, fm, z_val, dt_val):
+    def generality(self, event_log, net, im, fm):
         generality = generalization_algorithm.apply(event_log, net, im, fm)
         print(f"Generality: {generality}")
-        self.quality_dict["Generality"].append((z_val, dt_val, generality))
+        self.quality_dict["Generality"].append(generality)
 
-    def calculate_aecs(self, event_log, quasi_identifiers, z_val, dt_val):
+    def calculate_aecs(self, event_log, quasi_identifiers, ):
         # group based on quasi-identifiers
         equivalence_classes = event_log.groupby(quasi_identifiers)
 
@@ -75,26 +81,26 @@ class Measurement:
         aecs = class_sizes.mean()
         print(f"AECS: {aecs}")
         # AECS is the average of all classes
-        self.quality_dict["AECS"].append((z_val, dt_val, aecs))
 
-    def __compute_qualities(self, log, z_val, dt_val, quasi_identifiers):
-        # Calculate AECS for the complete log
-        self.calculate_aecs(log, quasi_identifiers, z_val, dt_val)
-
+    def compute_qualities(self, net, im, fm, log, z_val, dt_val, quasi_identifiers):
         # Discover the Petri Net model from the log
-        net, im, fm = pm4py.discover_petri_net_inductive(log)
+        # net, im, fm = pm4py.discover_petri_net_inductive(log)
+
+        # pm4py.write_pnml(net, im, fm, )
 
         # Evaluate simplicity of model
-        self.simplicity(net, z_val, dt_val)
+
+        self.quality_dict["Z"].append(z_val)
+        self.quality_dict["dT"].append(dt_val)
+        self.simplicity(net)
 
         # Evaluate Model on Discovery Log
-        self.fitness(log, net, im, fm, z_val, dt_val)
-        self.precision(log, net, im, fm, z_val, dt_val)
-        if self.unfiltered_log is None:
-            return
-        self.generality(self.unfiltered_log, net, im, fm, z_val, dt_val)
+        self.fitness(log, net, im, fm)
+        self.precision(log, net, im, fm)
 
-    def comp_qualities_of_file(self, file_path, z_val, dt_val, quasi_identifiers=["case_id", "activity"]):
+        self.generality(log, net, im, fm)
+
+    def comp_qualities_of_file(self, path, file, z_val, dt_val, quasi_identifiers=["case_id", "activity"]):
         """
         Evaluates the quality of a discovered Petri net model based on a filtered event log,
         incorporating validation.
@@ -106,10 +112,16 @@ class Measurement:
             quasi_identifiers (list): List of quasi-identifiers used for filtering (default is ["activity"]).
         """
         # Import event log
+        file_path = os.path.join(path, file)
         log = import_csv(file_path)  # import event log
-        calculate_sparsity(log)
-        # Calculate AECS for the complete log
-        self.__compute_qualities(log, z_val, dt_val, quasi_identifiers)
+
+        p = file_path.removesuffix(".csv") + ".pnml"
+        net, im, fm = pm4py.read_pnml(p)
+        path, file = csv2auto(path +"/", file, "/home/fabian/Github/Bachelor_thesis_z_filter/tmp/")
+        self.quality_dict['RISK_A'].append(risk_re_ident_quant(path +"/", file))
+        self.quality_dict['RISK_E'].append(risk_re_ident_quant(path + "/", file, projection='E'))
+        # self.calculate_aecs(log, z_val, dt_val, quasi_identifiers)
+        self.compute_qualities(net, im, fm, log, z_val, dt_val, quasi_identifiers)
 
     def __set_dict(self, dict):
         self.quality_dict = dict
@@ -121,6 +133,7 @@ class Measurement:
             basename: name of the csv file
             """
         try:
+            self.sort_dict_according_to_z()
             # only consider keys with value-list-size greater 0
             filtered_hashmap = {k: v for k, v in self.quality_dict.items() if len(v) > 0}
             # Sicherstellen, dass alle Listen in der Hashmap die gleiche Länge haben
@@ -142,6 +155,12 @@ class Measurement:
         self.quality_dict.clear()
         self.quality_dict = self.init_dict()
 
+    def sort_dict_according_to_z(self):
+        sorted_indices = sorted(range(len(self.quality_dict["Z"])), key=lambda i: self.quality_dict["Z"][i])
+        self.quality_dict = {key: [value[i] for i in sorted_indices] for key, value in self.quality_dict.items()}
+
+        print(self.quality_dict)
+
     def read_from_csv(self, csv_file_path):
         """
            Reads a hashmap from a csv file written by the `write_to_csv` method.
@@ -156,9 +175,9 @@ class Measurement:
                 reader = csv.DictReader(csv_file)
                 hashmap = {field: [] for field in reader.fieldnames}  # Initialize hashmap with empty lists
 
-            for row in reader:
-                for key, value in row.items():
-                    hashmap[key].append(value)
+                for row in reader:
+                    for key, value in row.items():
+                        hashmap[key].append(value)
 
             self.__set_dict(hashmap)
 
@@ -176,30 +195,104 @@ def visualize_process_tree(tree):
     pt_visualizer.view(gviz_tree)
 
 
+def traverse_and_build_petri_nets(path):
+    for (parent, dirs, files) in os.walk(path):
+        for file in files:
+            path = os.path.join(parent, file)
+            if path.endswith(".csv"):
+                print(path)
+                try:
+                    log = import_csv(str(path))
+                    # pandas.to_datetime(log['timestamp'], utc=True)
+                    net, im, fm = pm4py.discover_petri_net_inductive(log, multi_processing=True)
+                    pm4py.write_pnml(net, im, fm, str(path.removesuffix(".csv")))
+                except pandas.errors.ParserError as e:
+                    print(e)
+
+
+def traverse_and_measure(directory):
+
+    for entry in os.listdir(directory):
+        full_path = os.path.join(directory, entry)
+        # if os.path.isfile(full_path):
+        if os.path.isdir(full_path):
+            print(f"Traversing this directory: {full_path}")
+            # prepare Measurement object
+            ms = Measurement("/home/fabian/Github/Bachelor_thesis_z_filter/results_csv")
+            # prepare file path to csv file
+            b_name = str(os.path.basename(directory)).removesuffix(".csv")
+            basename = b_name + ".csv"
+            file_path = os.path.join(directory, basename)
+            # compute qualities of original csv-file
+
+            ms.comp_qualities_of_file(directory, basename, 1, str(float("inf")))
+
+            measure_nets(full_path, ms)
+
+            ms.write_to_csv(b_name + str(entry))
+
+
+from concurrent.futures import ProcessPoolExecutor
+
+
+# def traverse():
+#     path = "/home/fabian/Github/Bachelor_thesis_z_filter/data_csv"
+#     for entry in os.listdir(path):
+#         curr = os.path.join(path, entry)
+#         if os.path.isdir(curr):
+#             traverse_and_measure(curr)
+
+
+def traverse():
+    path = "/data/data_csv"
+
+    # ProcessPoolExecutor für parallele Ausführung
+    with ProcessPoolExecutor() as executor:
+        futures = []
+        for entry in os.listdir(path):
+            curr = os.path.join(path, entry)
+            if os.path.isdir(curr):
+                print(curr)
+                # Task zur Verarbeitung des Verzeichnisses parallel hinzufügen
+                futures.append(executor.submit(traverse_and_measure, curr))
+
+        # Optional: Warte auf alle Aufgaben
+        for future in futures:
+            future.result()
+
+
+def measure_nets(full_path, ms):
+    for entry in os.listdir(str(full_path)):
+        p = os.path.join(full_path, entry)
+        print(p)
+        if os.path.isfile(p) and os.path.basename(p).endswith(".csv"):
+            curr_path = os.path.join(full_path, entry)
+            basename = os.path.basename(curr_path).removesuffix(".csv")
+            print(curr_path)
+            number, prefix, duration = compute.extract_number_and_prefix(basename)
+            ms.comp_qualities_of_file(full_path, entry, number, str(duration))
+
+
 if __name__ == "__main__":
-    ms = Measurement("/home/fabian/Github/Bachelor_thesis_z_filter/evaluation/results")
-    path = "/home/fabian/TU_DRESDEN/PrivateMine/SOURCED/data/Sepsis_Cases-Event_Log.xes"
-    ms.set_unfiltered_log(path)
-    ms.comp_qualities_of_file("/home/fabian/Github/Bachelor_thesis_z_filter/evaluation/results_filtering/Sepsis_Cases-Event_Log/Sepsis_Cases-Event_LogZ1PT3600S.csv", 0, "0s")
-    ms.comp_qualities_of_file(
-        "/home/fabian/Github/Bachelor_thesis_z_filter/evaluation/results_filtering/Sepsis_Cases-Event_Log/Sepsis_Cases-Event_LogZ10PT3600S.csv",
-        10, "3600s")
+    # traverse_and_build_petri_nets("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv_hard/BPI Challenge 2017")
+    # ms = Measurement("")
+    #
+    # base = "/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/Sepsis Cases - Event Log"
+    # for dir in os.listdir(base):
+    #     parent = os.path.join(base, dir)
+    #     if os.path.isdir(parent):
+    #         print(f"----------------------{dir}--------------------------")
+    #         for file in os.listdir(parent):
+    #             if file.endswith(".csv"):
+    #                 print(file)
+    #                 path = os.path.join(parent, file)
+    #                 log = import_csv(path)
+    #                 log = log[["case_id", "activity", "timestamp", "source"]].copy()
+    #
+    #                 ms.calculate_aecs(log, ["case_id", "source"])
+    #
+    #                 ms.calculate_aecs(log, ["activity"])
 
-
-
-# def measure_other_simplicities(quality_dict, net, z, t):
-#     '''
-#     Not necessary!!
-#     Args:
-#         quality_dict: dictionary containing quality measure
-#         net:
-#         z:
-#         t:
-#
-#     Returns:
-#
-#     '''
-#     quality_dict["Simplicity_EXTENDED_CARDOSO"].append(
-#         (z, t, simplicity_algorithm.apply(net, variant=EXTENDED_CARDOSO)))
-#     quality_dict["Simplicity_EXTENDED_CYCLOMATIC"].append(
-#         (z, t, simplicity_algorithm.apply(net, variant=EXTENDED_CYCLOMATIC)))
+    # traverse_and_build_petri_nets("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv")
+    traverse()
+    # print("Success")

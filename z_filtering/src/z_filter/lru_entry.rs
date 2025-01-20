@@ -15,7 +15,7 @@ impl LRUEntry {
     }
 
     pub fn to_event_source(self, activity: String) -> EventSource {
-        EventSource::new(self.user, Some(activity),self.source, Some(self.timestamp))
+        EventSource::new(self.user, Some(activity),self.source, self.timestamp)
     }
 
 }

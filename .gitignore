@@ -181,6 +181,8 @@ cython_debug/
 */.idea
 
 
-/data_xes/
+/data/data_xes/
 
-/data_csv/
+/data/data_csv/
+/data/
+/results_csv/

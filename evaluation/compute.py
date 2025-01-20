@@ -1,13 +1,16 @@
+import os
 from pathlib import Path
 import re
 import pandas as pd
 import pm4py
-import os
+
+import re_ident as ri
+import csv2auto as ca
 
 
 def import_csv(filepath):
     """Import CSV as a pandas DataFrame."""
-    event_log = pd.read_csv(filepath, sep=',')
+    event_log = pd.read_csv(filepath, sep=';')
     required_columns = ['case_id', 'activity', 'timestamp']
     event_log = event_log[required_columns]
     # event_log.rename(columns={"case_id=case":"concept:name", "activity":"concept:name", "timestamp":"time:timestamp"})
@@ -17,23 +20,6 @@ def import_csv(filepath):
 
     print(f"Events {num_events}, unique cases: {num_cases}")
     return event_log
-
-
-# def walk_dir(folder_path, cmp, measurement):
-#     """Walk through all files in a directory."""
-#     for file_path in sorted([file for file in Path(folder_path).iterdir()]):
-#         if file_path.is_file():
-#             measurement.comp_qualities_of_file()
-#             process_file(file_path, cmp, quality_dict)
-
-
-
-
-def petri_stats(petri_net):
-    """Print statistics of the Petri net."""
-    print(f"Number of transitions: {len(petri_net.transitions)}")
-    print(f"Number of places: {len(petri_net.places)}")
-    print(f"Number of arcs: {len(petri_net.arcs)}")
 
 
 def extract_number_and_prefix(filename):
@@ -53,3 +39,55 @@ def extract_number_and_prefix(filename):
         return number, prefix, duration
     else:
         return -1, "", ""
+
+
+def make_dir_safe(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+
+def traverse_and_compute_risk():
+    search_path = '/home/fabian/Github/Bachelor_thesis_z_filter/data/tmp/'
+
+    for dir in os.listdir(search_path):
+        full_path = os.path.join(search_path, dir)
+        if os.path.isdir(full_path):
+            for parent, dirs, files in os.walk(full_path):
+                for file in files:
+                    print(file)
+                    ri.risk_re_ident_quant(parent + "/", file)
+
+
+def traverse_and_convert():
+    search_path = '/data/data_csv/'
+    result_path = '/home/fabian/Github/Bachelor_thesis_z_filter/data/tmp/'
+
+    make_dir_safe(result_path)
+
+    for a_dir in os.listdir(search_path):
+        subdir = os.path.join(search_path, a_dir)
+        path = result_path + a_dir
+        make_dir_safe(path + "/")
+        for entry in os.listdir(subdir):
+            print(entry)
+            sub_sub_entry = os.path.join(subdir, entry)
+            if os.path.isdir(sub_sub_entry):
+                res = path + "/" + entry
+                make_dir_safe(res + "/")
+                for file in os.listdir(sub_sub_entry):
+                    if file.endswith('.csv'):
+                        try:
+                            ca.convert_csv2auto(sub_sub_entry + "/", file, res + "/")
+                        except IndexError as e:
+                            print(e)
+            elif os.path.isfile(sub_sub_entry):
+                print(entry)
+                if entry.endswith(".csv"):
+                    print(entry)
+                    ca.convert_csv2auto(subdir + "/", entry, path + "/")
+
+
+if __name__ == "__main__":
+    traverse_and_convert()
+    traverse_and_compute_risk()
+    # traverse_and_convert()

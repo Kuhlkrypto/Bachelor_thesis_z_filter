@@ -30,7 +30,7 @@ impl sourced_simulator::simulator_traits::node_executions::NodeExecutions for ZF
             if self.lru_manager.process(&case, &activity, &timestamp, &source) {
                 match self.zfiltering_method {
                     ZFilteringMethod::ClassicZfilter => {
-                        let event = EventSource::new(case, Some(activity), source, Some(timestamp));
+                        let event = EventSource::new(case, Some(activity), source, timestamp);
                         comm.publish_to_collector(event).await;
                     }
                     ZFilteringMethod::ImprovedZfilter => {
@@ -59,19 +59,19 @@ mod tests {
     #[tokio::test]
     async fn test_z_filter() {
         let vec = vec![
-            EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("1"), Some(String::from("ac2")), vec!["A".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("2"), Some(String::from("ac2")), vec!["A".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("3"), Some(String::from("ac2")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(10))),
+            EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now())),
+            EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now())),
+            EventSource::new(String::from("1"), Some(String::from("ac2")), vec!["A".to_string()], (Utc::now())),
+            EventSource::new(String::from("2"), Some(String::from("ac2")), vec!["A".to_string()], (Utc::now())),
+            EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now())),
+            EventSource::new(String::from("3"), Some(String::from("ac2")), vec!["A".to_string()], (Utc::now() + Duration::hours(10))),
             //--------------------------------------------Source B
-            EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["B".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["B".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["B".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("1"), Some(String::from("ac2")), vec!["B".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("2"), Some(String::from("ac2")), vec!["B".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("3"), Some(String::from("ac2")), vec!["B".to_string()], Some(Utc::now() + Duration::hours(10))),
+            EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["B".to_string()], (Utc::now())),
+            EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["B".to_string()], (Utc::now())),
+            EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["B".to_string()], (Utc::now())),
+            EventSource::new(String::from("1"), Some(String::from("ac2")), vec!["B".to_string()], (Utc::now())),
+            EventSource::new(String::from("2"), Some(String::from("ac2")), vec!["B".to_string()], (Utc::now())),
+            EventSource::new(String::from("3"), Some(String::from("ac2")), vec!["B".to_string()], (Utc::now() + Duration::hours(10))),
         ];
 
         match sourced_simulator::create_default_simulator(
@@ -90,17 +90,17 @@ mod tests {
     #[tokio::test]
     async fn test_z_time_improved(){
         let vec = vec![
-        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
-        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
-        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
-        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
-        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
-        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(10))),
-        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(10))),
-        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(10))),
-        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(21))),
-        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(21))),
-        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now() + Duration::hours(21))),
+        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now())),
+        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now())),
+        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now())),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now())),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now())),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now() + Duration::hours(10))),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now() + Duration::hours(10))),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now() + Duration::hours(10))),
+        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now() + Duration::hours(21))),
+        EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now() + Duration::hours(21))),
+        EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], (Utc::now() + Duration::hours(21))),
 
         ];
 

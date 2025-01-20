@@ -1,10 +1,10 @@
 use crate::z_filter::attribute::Attribute;
 use crate::z_filter::config::Config;
 use crate::z_filter::lru_entry::LRUEntry;
+use crate::z_filter::z_anon::ZFilteringMethod;
 use chrono::{DateTime, Duration, Utc};
 use logfile_parser::parsing_structures::event_sourced::EventSource;
 use std::collections::{HashMap, VecDeque};
-use crate::z_filter::z_anon::{ ZFilteringMethod};
 
 #[derive(Debug, Clone)]
 pub struct LruManager {
@@ -12,7 +12,7 @@ pub struct LruManager {
     users: HashMap<Attribute, u32>,
     max_users: usize, // z-value: max users before output
     max_age: Duration, // ∆t: maximum age for LRU entries
-    zfiltering_method: ZFilteringMethod
+    zfiltering_method: ZFilteringMethod,
 }
 
 impl LruManager {
@@ -43,9 +43,9 @@ impl LruManager {
         }
     }
 
-    fn check_user_improved(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, user: &String, timestamp: &DateTime<Utc>, source: &Vec<String>){
+    fn check_user_improved(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, user: &String, timestamp: &DateTime<Utc>, source: &Vec<String>) {
         //Improved Version of check user, all entries have to be stored in this Version until they are released (if)
-        if lru.iter().any(|lru_entry| {lru_entry.user == *user}){
+        if lru.iter().any(|lru_entry| { lru_entry.user == *user }) {
             //user already exists in lru_entry
             //create new entry and push to front of queue
             lru.push_front(LRUEntry::new(user, *timestamp, source.clone()));
@@ -73,13 +73,13 @@ impl LruManager {
         }
     }
 
-    fn evict_old_users_improved(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, current_time: &DateTime<Utc>, max_age: &Duration){
+    fn evict_old_users_improved(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, current_time: &DateTime<Utc>, max_age: &Duration) {
         while let Some(entry) = lru.back() {
             if *current_time - entry.timestamp > *max_age {
                 let user = entry.user.clone();
                 //remove oldest users if exceeding threshold
                 let _ = lru.pop_back();
-                if !lru.iter().any(|lruentry: &LRUEntry| {lruentry.user == user}){
+                if !lru.iter().any(|lruentry: &LRUEntry| { lruentry.user == user }) {
                     *num_users -= 1;
                 }
             } else {
@@ -104,11 +104,11 @@ impl LruManager {
 
     pub fn release_other_entries(&mut self, activity: &String) -> VecDeque<LRUEntry> {
         let mut res = VecDeque::new();
-        if let Some(lru) = self.cache.get_mut(&Attribute::new(activity)){
-            for e in lru{
-                 if e.published{
-                     break;
-                 }
+        if let Some(lru) = self.cache.get_mut(&Attribute::new(activity)) {
+            for e in lru {
+                if e.published {
+                    break;
+                }
                 e.published = true;
                 //don't remove from list,
                 res.push_back(e.clone());
@@ -118,37 +118,35 @@ impl LruManager {
     }
 }
 
-    #[allow(unused_imports, dead_code)]
-mod tests{
-    use logfile_parser::parsing_structures::event_sourced::EventSourceLog;
-    use crate::z_filter::z_anon::{ZFilter, ZFilteringMethod};
+#[allow(unused_imports, dead_code)]
+mod tests {
     use super::*;
+    use crate::z_filter::z_anon::{ZFilter, ZFilteringMethod};
+    use logfile_parser::parsing_structures::event_sourced::EventSourceLog;
 
 
-    static  Z: usize = 2;
-    fn init_event_source(a: String, u: String) -> EventSource{
+    static Z: usize = 2;
+    fn init_event_source(a: String, u: String) -> EventSource {
         EventSource::new(
             u,
             Some(a.clone()),
             vec![a],
-            Some(Utc::now()))
+            Utc::now())
     }
     fn init_event_sources_equal_user_activity(i: u32) -> Vec<EventSource> {
         let mut vec = Vec::new();
-        for j in 0..i{
+        for j in 0..i {
             vec.push(init_event_source(j.to_string(), j.to_string()));
-
         }
 
         vec
-
     }
     #[test]
-    fn test_distinct_attributes_distinct_user(){
-        let  res = init_event_sources_equal_user_activity(10);
+    fn test_distinct_attributes_distinct_user() {
+        let res = init_event_sources_equal_user_activity(10);
         let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::ClassicZfilter);
 
-        for e in res{
+        for e in res {
             if let Some((case, activity, source, timestamp)) = e.disassemble() {
                 assert_eq!(lru.process(&case, &activity, &timestamp, &source), false);
             } else {
@@ -158,14 +156,14 @@ mod tests{
     }
 
     #[test]
-    fn test_distinct_attributes_same_user(){
+    fn test_distinct_attributes_same_user() {
         let mut vec = Vec::new();
         let user = String::from("test");
-        for i in 0..10{
+        for i in 0..10 {
             vec.push(init_event_source(i.to_string(), user.clone()));
         }
         let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::ClassicZfilter);
-        for e in vec{
+        for e in vec {
             if let Some((case, activity, source, timestamp)) = e.disassemble() {
                 assert_eq!(lru.process(&case, &activity, &timestamp, &source), false);
             }
@@ -173,22 +171,22 @@ mod tests{
     }
 
     #[test]
-    fn test_different_users_same_attribute(){
+    fn test_different_users_same_attribute() {
         let attribute: String = String::from("test");
         let mut vec = Vec::new();
-        for i in 0..10{
+        for i in 0..10 {
             vec.push(init_event_source(attribute.clone(), i.to_string()));
         }
         let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::ClassicZfilter);
-        for (i,e) in vec.into_iter().enumerate(){
+        for (i, e) in vec.into_iter().enumerate() {
             let result;
-            if let Some((case, activity, source, timestamp)) = e.disassemble(){
+            if let Some((case, activity, source, timestamp)) = e.disassemble() {
                 result = lru.process(&case, &activity, &timestamp, &source);
             } else {
                 assert!(false);
                 return;
             }
-            if i < Z -1{
+            if i < Z - 1 {
                 assert_eq!(result, false);
             } else {
                 assert_eq!(result, true);
@@ -198,69 +196,66 @@ mod tests{
 
     #[test]
     /// A test whether the eviction loop really evicts user before looking whether it should be outputted
-    fn test_delta_time_limit(){
+    fn test_delta_time_limit() {
         let mut vec = Vec::new();
         let user = String::from("test");
-        vec.push(EventSource::new(user.clone(), Some(user.clone()), vec![], Some(Utc::now())));
-        vec.push(EventSource::new(String::from("lol"), Some(user.clone()), vec![], Some(Utc::now() + Duration::hours(10))));
+        vec.push(EventSource::new(user.clone(), Some(user.clone()), vec![], Utc::now()));
+        vec.push(EventSource::new(String::from("lol"), Some(user.clone()), vec![], Utc::now() + Duration::hours(10)));
         let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::ClassicZfilter);
-        for e in vec.into_iter(){
+        for e in vec.into_iter() {
             if let Some((case, activity, source, timestamp)) = e.disassemble() {
                 assert_eq!(lru.process(&case, &activity, &timestamp, &source), false)
-            }else {
+            } else {
                 assert!(false);
             }
         }
-
     }
 
     #[test]
-    fn test_delta_time(){
+    fn test_delta_time() {
         let mut vec = Vec::new();
         let user = String::from("test");
-        vec.push(EventSource::new(user.clone(), Some(user.clone()), vec![], Some(Utc::now())));
-        vec.push(EventSource::new(String::from("lol"), Some(user.clone()), vec![], Some(Utc::now() + Duration::hours(9))));
+        vec.push(EventSource::new(user.clone(), Some(user.clone()), vec![], Utc::now()));
+        vec.push(EventSource::new(String::from("lol"), Some(user.clone()), vec![], Utc::now() + Duration::hours(9)));
         let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::ClassicZfilter);
-        for (i,e) in vec.into_iter().enumerate(){
+        for (i, e) in vec.into_iter().enumerate() {
             if let Some((case, activity, source, timestamp)) = e.disassemble() {
                 let res = lru.process(&case, &activity, &timestamp, &source);
 
-            if i == 0{
-                assert_eq!(res, false);
-            } else {
-                assert_eq!(res, true);
+                if i == 0 {
+                    assert_eq!(res, false);
+                } else {
+                    assert_eq!(res, true);
+                }
             }
-            }
-
         }
     }
 
 
     #[tokio::test]
-    async fn test_in_simulator(){
+    async fn test_in_simulator() {
         let vec = vec![
-            EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["A".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("1"), Some(String::from("ac2")), vec!["A".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("2"), Some(String::from("ac2")), vec!["A".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("3"), Some(String::from("ac2")), vec!["A".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Utc::now()),
+            EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Utc::now()),
+            EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["A".to_string()], Utc::now()),
+            EventSource::new(String::from("1"), Some(String::from("ac2")), vec!["A".to_string()], Utc::now()),
+            EventSource::new(String::from("2"), Some(String::from("ac2")), vec!["A".to_string()], Utc::now()),
+            EventSource::new(String::from("3"), Some(String::from("ac2")), vec!["A".to_string()], Utc::now()),
             //--------------------------------------------Source B
-            EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["B".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["B".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["B".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("1"), Some(String::from("ac2")), vec!["B".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("2"), Some(String::from("ac2")), vec!["B".to_string()], Some(Utc::now())),
-            EventSource::new(String::from("3"), Some(String::from("ac2")), vec!["B".to_string()], Some(Utc::now())),
+            EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["B".to_string()], Utc::now()),
+            EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["B".to_string()], Utc::now()),
+            EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["B".to_string()], Utc::now()),
+            EventSource::new(String::from("1"), Some(String::from("ac2")), vec!["B".to_string()], Utc::now()),
+            EventSource::new(String::from("2"), Some(String::from("ac2")), vec!["B".to_string()], Utc::now()),
+            EventSource::new(String::from("3"), Some(String::from("ac2")), vec!["B".to_string()], Utc::now()),
         ];
 
         match sourced_simulator::create_default_simulator(
-            ZFilter::new(LruManager::from(Config::new(3,Duration::hours(10)), ZFilteringMethod::ClassicZfilter), ZFilteringMethod::ClassicZfilter),
-            EventSourceLog::from(vec.clone())).await{
+            ZFilter::new(LruManager::from(Config::new(3, Duration::hours(10)), ZFilteringMethod::ClassicZfilter), ZFilteringMethod::ClassicZfilter),
+            EventSourceLog::from(vec.clone())).await {
             Ok(simulator) => {
                 let res = simulator.run().await;
                 assert_eq!(res.len(), 4);
-
             }
             Err(e) => {
                 panic!("{}", e);

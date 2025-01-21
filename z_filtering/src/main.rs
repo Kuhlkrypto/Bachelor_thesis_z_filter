@@ -80,7 +80,7 @@ fn preprocess_args(mut args: Vec<String>) -> (String, u32, Duration, ZFilteringM
 
 fn parse_duration(input: &str) -> Result<Duration, String> {
     if input == "inf"{
-        return Ok(Duration::seconds(i64::MAX));
+        return Ok(Duration::seconds(i64::MAX/1000));
     }
     let (value, unit) = input.split_at(input.len() - 1);
     let value: u64 = value.parse().map_err(|_| "Invalid Number".to_string())?;
@@ -153,8 +153,13 @@ async fn main() {
                 Ok(mut log) => {
                     sort_log(&mut log).await;
                     let a = EventSourceLog::from(log);
+                    let t_string= if t.eq(&Duration::seconds(i64::MAX/1000)){
+                         String::from("PT0INF0S")
+                    } else {
+                        t.to_string()
+                    };
                     if a.get_log().len() > 0{
-                        a.print_to_csv(<&str>::try_from(result_folder.as_os_str()).unwrap(), &((file_name + "Z" + &z.to_string()).to_string() + t.to_string().as_str()));
+                        a.print_to_csv(<&str>::try_from(result_folder.as_os_str()).unwrap(), &(file_name + "Z" + &z.to_string() + &t_string));
                     }
                 }
                 Err(e) => {

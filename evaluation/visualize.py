@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import measurement as ms
 
 
-def visualize_dict(data):
+def visualize_dict(data, basename: str):
     """
     Visualisiert die Daten aus einem Dictionary und speichert die Plots in einem Ordner.
 
@@ -12,7 +12,8 @@ def visualize_dict(data):
 
     """
     # Erstellen des Ausgabeordners
-    output_folder = "results/visualize"
+    b_name = basename.removesuffix(".csv")
+    output_folder = "results/visualize/" + b_name
     os.makedirs(output_folder, exist_ok=True)
 
     # Daten extrahieren
@@ -38,14 +39,14 @@ def visualize_dict(data):
             plt.plot(Z_filtered, values, marker='o', label=metric)
 
         # Plot-Details
-        plt.title(f"Metrics Visualization for dT = {convert_t_readable(t)}")
+        plt.title(f"vis {b_name} dt= {convert_t_readable(t)}")
         plt.xlabel("Z")
         plt.ylabel("Metric Value")
         plt.legend(title="Metrics", loc="best")
         plt.grid(True)
 
         # Speichern des Plots
-        plot_path = os.path.join(output_folder, f"visualization_dT_{convert_t_readable(t)}.png")
+        plot_path = os.path.join(output_folder, f"vis {b_name} dt={convert_t_readable(t)}.png")
         plt.savefig(plot_path)
         plt.close()
 

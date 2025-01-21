@@ -1,28 +1,24 @@
 import csv
 import os
+import constants
+from concurrent.futures import ProcessPoolExecutor
 
 import pandas.errors
 
 import compute
 
 import pm4py
-from pm4py.algo.evaluation.simplicity.algorithm import EXTENDED_CARDOSO, EXTENDED_CYCLOMATIC
-from pm4py.objects.log.importer.xes import importer as xes_importer
-from pm4py.algo.discovery.inductive import algorithm as inductive_miner
 from pm4py.algo.evaluation.replay_fitness import algorithm as replay_fitness_algorithm
 from pm4py.algo.evaluation.precision import algorithm as precision_algorithm
 from pm4py.algo.evaluation.generalization import algorithm as generalization_algorithm
 from pm4py.algo.evaluation.simplicity import algorithm as simplicity_algorithm
-from pm4py.objects.conversion.process_tree import converter as pt_converter
 from pm4py.visualization.petri_net import visualizer as pn_visualizer
 from pm4py.visualization.process_tree import visualizer as pt_visualizer
-
 from pm4py.algo.evaluation.precision import variants
-from pm4py.visualization.bpmn import visualizer as bpmn_visualizer
-
 from compute import import_csv
 from csv2auto import convert_csv2auto as csv2auto
 from re_ident import risk_re_ident_quant
+
 
 class Measurement:
 
@@ -106,7 +102,8 @@ class Measurement:
         incorporating validation.
 
         Args:
-            file_path (str): Path to the event log CSV file.
+            path (str): Path to the folder of the event log CSV file.
+            file (str): Name of the event log CSV file.
             z_val (int): z-anonymity value.
             dt_val (str): Delta threshold for anonymization.
             quasi_identifiers (list): List of quasi-identifiers used for filtering (default is ["activity"]).
@@ -117,8 +114,8 @@ class Measurement:
 
         p = file_path.removesuffix(".csv") + ".pnml"
         net, im, fm = pm4py.read_pnml(p)
-        path, file = csv2auto(path +"/", file, "/home/fabian/Github/Bachelor_thesis_z_filter/tmp/")
-        self.quality_dict['RISK_A'].append(risk_re_ident_quant(path +"/", file))
+        path, file = csv2auto(path + "/", file, "/home/fabian/Github/Bachelor_thesis_z_filter/tmp/")
+        self.quality_dict['RISK_A'].append(risk_re_ident_quant(path + "/", file))
         self.quality_dict['RISK_E'].append(risk_re_ident_quant(path + "/", file, projection='E'))
         # self.calculate_aecs(log, z_val, dt_val, quasi_identifiers)
         self.compute_qualities(net, im, fm, log, z_val, dt_val, quasi_identifiers)
@@ -200,6 +197,8 @@ def traverse_and_build_petri_nets(path):
         for file in files:
             path = os.path.join(parent, file)
             if path.endswith(".csv"):
+                if os.path.exists(path.removesuffix(".csv") + '.pnml'):
+                    continue
                 print(path)
                 try:
                     log = import_csv(str(path))
@@ -208,9 +207,17 @@ def traverse_and_build_petri_nets(path):
                     pm4py.write_pnml(net, im, fm, str(path.removesuffix(".csv")))
                 except pandas.errors.ParserError as e:
                     print(e)
+                except Exception as e:
+                    print(e)
 
 
-def traverse_and_measure(directory):
+def traverse_and_measure(directory: str, abstracted: bool):
+    """
+    Args:
+    :param directory: directory to be traversed
+    :param abstracted: True if only time_abstracted files should be considered, else False
+    :return:
+    """
 
     for entry in os.listdir(directory):
         full_path = os.path.join(directory, entry)
@@ -220,31 +227,23 @@ def traverse_and_measure(directory):
             # prepare Measurement object
             ms = Measurement("/home/fabian/Github/Bachelor_thesis_z_filter/results_csv")
             # prepare file path to csv file
-            b_name = str(os.path.basename(directory)).removesuffix(".csv")
+            b_name = ""
+            if abstracted:
+                b_name = os.path.basename(directory).removesuffix('.csv') + constants.ABSTRACTED_NAME_SUFFIX
+            else:
+                b_name = str(os.path.basename(directory)).removesuffix(".csv")
             basename = b_name + ".csv"
-            file_path = os.path.join(directory, basename)
             # compute qualities of original csv-file
+            ms.comp_qualities_of_file(directory, basename, 1, "base")
 
-            ms.comp_qualities_of_file(directory, basename, 1, str(float("inf")))
-
-            measure_nets(full_path, ms)
+            #TODO: weiter durchreichen
+            measure_nets(full_path, ms, abstracted)
 
             ms.write_to_csv(b_name + str(entry))
 
 
-from concurrent.futures import ProcessPoolExecutor
-
-
-# def traverse():
-#     path = "/home/fabian/Github/Bachelor_thesis_z_filter/data_csv"
-#     for entry in os.listdir(path):
-#         curr = os.path.join(path, entry)
-#         if os.path.isdir(curr):
-#             traverse_and_measure(curr)
-
-
 def traverse():
-    path = "/data/data_csv"
+    path = "/home/fabian/Github/Bachelor_thesis_z_filter/data/data_csv"
 
     # ProcessPoolExecutor für parallele Ausführung
     with ProcessPoolExecutor() as executor:
@@ -254,45 +253,33 @@ def traverse():
             if os.path.isdir(curr):
                 print(curr)
                 # Task zur Verarbeitung des Verzeichnisses parallel hinzufügen
-                futures.append(executor.submit(traverse_and_measure, curr))
+                futures.append(executor.submit(traverse_and_measure, curr, True))
+                futures.append(executor.submit(traverse_and_measure, curr, False))
 
-        # Optional: Warte auf alle Aufgaben
+        # Wait for every task
         for future in futures:
             future.result()
 
 
-def measure_nets(full_path, ms):
+def measure_nets(full_path, ms, abstracted: bool):
     for entry in os.listdir(str(full_path)):
         p = os.path.join(full_path, entry)
         print(p)
         if os.path.isfile(p) and os.path.basename(p).endswith(".csv"):
+            if abstracted and not entry.__contains__(constants.ABSTRACTED_NAME_SUFFIX):
+                continue
+            elif not abstracted and entry.__contains__(constants.ABSTRACTED_NAME_SUFFIX):
+                continue
             curr_path = os.path.join(full_path, entry)
             basename = os.path.basename(curr_path).removesuffix(".csv")
+
             print(curr_path)
             number, prefix, duration = compute.extract_number_and_prefix(basename)
             ms.comp_qualities_of_file(full_path, entry, number, str(duration))
 
 
 if __name__ == "__main__":
-    # traverse_and_build_petri_nets("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv_hard/BPI Challenge 2017")
+    # traverse_and_build_petri_nets("/home/fabian/Github/Bachelor_thesis_z_filter/data/data_csv/Sepsis Cases - Event Log")
     # ms = Measurement("")
-    #
-    # base = "/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/Sepsis Cases - Event Log"
-    # for dir in os.listdir(base):
-    #     parent = os.path.join(base, dir)
-    #     if os.path.isdir(parent):
-    #         print(f"----------------------{dir}--------------------------")
-    #         for file in os.listdir(parent):
-    #             if file.endswith(".csv"):
-    #                 print(file)
-    #                 path = os.path.join(parent, file)
-    #                 log = import_csv(path)
-    #                 log = log[["case_id", "activity", "timestamp", "source"]].copy()
-    #
-    #                 ms.calculate_aecs(log, ["case_id", "source"])
-    #
-    #                 ms.calculate_aecs(log, ["activity"])
-
-    # traverse_and_build_petri_nets("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv")
-    traverse()
-    # print("Success")
+    # traverse()
+    traverse_and_measure("/home/fabian/Github/Bachelor_thesis_z_filter/data/data_csv/Sepsis Cases - Event Log", True)

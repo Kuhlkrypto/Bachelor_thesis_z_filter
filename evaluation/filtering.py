@@ -1,7 +1,7 @@
 import math
 import os.path
 import subprocess
-
+import constants
 import pandas as pd
 
 
@@ -17,7 +17,7 @@ def filter_log(log_path, z, t, modi):
              modi],
             check=True,
             text=True,
-            capture_output=True  # Um die Ausgabe zu erfassen
+                # capture_output=True  # Um die Ausgabe zu erfassen
         )
         res.check_returncode()
 
@@ -26,9 +26,9 @@ def filter_log(log_path, z, t, modi):
         exit(1)
 
 
-def generate_z_values(file_path, percentages=[0.01, 0.05, 0.1, 0.2]):
+def generate_z_values(file_path, percentages=[0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.2]):
     # CSV-Datei einlesen
-    df = pd.read_csv(file_path, sep=';')
+    df = pd.read_csv(file_path, sep=constants.DELIMITER)
 
     # Anzahl der einzigartigen Identifier
     unique_values = df["case_id"].unique()
@@ -62,13 +62,10 @@ def traverse_and_filter(directory: str, depth, t_l=['1h', '24h', '72h', 'inf'], 
                     for m in modi:
                         print(f"Z: {z}, t: {t}, m:{m}")
                         filter_log(path, z, t, m)
-        # for dir in dirs:
-        #     traverse_and_filter(dir, depth+1, z_l, t, modi)
-
 
 
 if __name__ == "__main__":
     # # filter_log("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/Road_Traffic_Fine_Management_Process/Road_Traffic_Fine_Management_Process.csv", 1, "3600h")
     base_directory = "/home/fabian/Github/Bachelor_thesis_z_filter/data/data_csv/"
     # # filter_log("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/Road_Traffic_Fine_Management_Process/Road_Traffic_Fine_Management_Process.csv", 1, "3600h", "0")
-    traverse_and_filter(base_directory,0)
+    traverse_and_filter(base_directory, 0)

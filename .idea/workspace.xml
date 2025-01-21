@@ -8,25 +8,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3601d5c6-4331-4b0c-a297-187eba8424fb" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/data_parser/src/keywords/bpi2012.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data_parser/src/keywords/bpi2017.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data_parser/src/keywords/bpi2018.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/evaluation/abstract_timestamps.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/evaluation/csv2auto.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/evaluation/re_ident.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/Bachelor_thesis_z_filter.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Bachelor_thesis_z_filter.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evaluation/constants.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evaluation/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_parser/src/keywords/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/data_parser/src/keywords/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_parser/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/data_parser/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/abstract_timestamps.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/evaluation/compute.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/compute.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/evaluation/filtering.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/filtering.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/evaluation/measurement.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/measurement.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/priv_metrik.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/priv_metrik.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/re_ident.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/re_ident.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/result_printer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/testerstest.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/visualize.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/visualize.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/z_filtering/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/z_filtering/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/z_filtering/src/z_filter/lru_entry.rs" beforeDir="false" afterPath="$PROJECT_DIR$/z_filtering/src/z_filter/lru_entry.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/z_filtering/src/z_filter/lru_manager.rs" beforeDir="false" afterPath="$PROJECT_DIR$/z_filtering/src/z_filter/lru_manager.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/z_filtering/src/z_filter/z_anon.rs" beforeDir="false" afterPath="$PROJECT_DIR$/z_filtering/src/z_filter/z_anon.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,6 +64,7 @@
     &quot;Python.compute.executor&quot;: &quot;Run&quot;,
     &quot;Python.csv2auto.executor&quot;: &quot;Run&quot;,
     &quot;Python.filtering.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
     &quot;Python.measurement.executor&quot;: &quot;Run&quot;,
     &quot;Python.priv_metrik.executor&quot;: &quot;Run&quot;,
     &quot;Python.re-ident.executor&quot;: &quot;Run&quot;,
@@ -79,7 +73,7 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.rust.reset.selective.auto.import&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/fabian/Github/Bachelor_thesis_z_filter&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/fabian/Github/docker_test&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -93,8 +87,8 @@
 }</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/data_csv" />
       <recent name="$PROJECT_DIR$/evaluation" />
+      <recent name="$PROJECT_DIR$/data_csv" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/data_csv_hard" />
       <recent name="$PROJECT_DIR$/evaluation/results" />
@@ -170,6 +164,28 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
+    <configuration name="compute" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Bachelor_thesis_z_filter" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/evaluation" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluation/compute.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="filtering" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Bachelor_thesis_z_filter" />
       <option name="ENV_FILES" value="" />
@@ -192,6 +208,28 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Bachelor_thesis_z_filter" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/evaluation" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluation/main.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="measurement" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Bachelor_thesis_z_filter" />
       <option name="ENV_FILES" value="" />
@@ -206,50 +244,6 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluation/measurement.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="re_ident" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Bachelor_thesis_z_filter" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/evaluation" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluation/re_ident.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="visualize" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Bachelor_thesis_z_filter" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/evaluation" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluation/visualize.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -286,7 +280,10 @@
       <workItem from="1737043004580" duration="447000" />
       <workItem from="1737302990927" duration="5627000" />
       <workItem from="1737322071055" duration="938000" />
-      <workItem from="1737374149125" duration="329000" />
+      <workItem from="1737374149125" duration="3492000" />
+      <workItem from="1737394922192" duration="288000" />
+      <workItem from="1737471385691" duration="10000" />
+      <workItem from="1737472848973" duration="2293000" />
     </task>
     <servers />
   </component>

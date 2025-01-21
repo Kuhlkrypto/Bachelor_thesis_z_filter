@@ -1,0 +1,6 @@
+DELIMITER = ';'
+DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f %Z'
+COL_NAME_TIMESTAMP = 'timestamp'
+COL_NAME_CASE_IDENT = 'case_id'
+COL_NAME_ACTIVITY = 'activity'
+ABSTRACTED_NAME_SUFFIX = 'abstracted'

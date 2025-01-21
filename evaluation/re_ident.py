@@ -105,17 +105,17 @@ def generate_random_points(data, activity_local, number_points_local):
         population = list(enumerate(row.get(activity_local + '_combined', [])))
 
         # # Debug-Ausgabe
-        print(f"Population: {population}")
+        # print(f"Population: {population}")
 
         if not population:  # Wenn die Population leer ist
-            print("Population ist leer. Keine Punkte werden gesampelt.")
+            # print("Population ist leer. Keine Punkte werden gesampelt.")
             return []  # Leere Liste zurückgeben
 
         # Berechnung der Sample-Größe
         sample_size = max(1, min(len(population), int(len(population) * number_points_local)))
 
         # Debug-Ausgabe
-        print(f"Sample size: {sample_size}")
+        # print(f"Sample size: {sample_size}")
 
         # Sampling durchführen
         return random.sample(population, sample_size)

@@ -1,43 +1,51 @@
 import os
-from pathlib import Path
+import constants
 import re
 import pandas as pd
 import pm4py
-
+import abstract_timestamps as abs_t
 import re_ident as ri
 import csv2auto as ca
 
 
 def import_csv(filepath):
     """Import CSV as a pandas DataFrame."""
-    event_log = pd.read_csv(filepath, sep=';')
-    required_columns = ['case_id', 'activity', 'timestamp']
+    event_log = pd.read_csv(filepath, sep=constants.DELIMITER)
+    # required_columns = [constants.COL_NAME_CASE_IDENT, constants.COL_NAME_ACTIVITY, constants.COL_NAME_TIMESTAMP]
+    required_columns = ["case_id", "activity", "timestamp"]
     event_log = event_log[required_columns]
     # event_log.rename(columns={"case_id=case":"concept:name", "activity":"concept:name", "timestamp":"time:timestamp"})
-    event_log = pm4py.format_dataframe(event_log, case_id='case_id', activity_key='activity', timestamp_key='timestamp')
-    num_events = len(event_log)
-    num_cases = len(event_log['case_id'].unique())
-
-    print(f"Events {num_events}, unique cases: {num_cases}")
+    event_log = pm4py.format_dataframe(event_log, case_id=constants.COL_NAME_CASE_IDENT,
+                                       activity_key=constants.COL_NAME_ACTIVITY,
+                                       timestamp_key=constants.COL_NAME_TIMESTAMP)
+    print(f"Events {len(event_log)}, unique cases: {len(event_log[constants.COL_NAME_CASE_IDENT].unique())}")
     return event_log
 
 
 def extract_number_and_prefix(filename):
-    """Parses a filename according to following format:
-    <original_filename>Z<value>PT<time in seconds>S
+    """Parses a filename according to the following format:
+    <original_filename>Z<value>PT<time in seconds or 0inf0>S
 
     Returns:
     number: z-value
     prefix: original filename
-    duration: duration in seconds
+    duration: duration in seconds or float('inf') for 0inf0
     """
-    match = re.match("^(.*?[^Z]*)Z(\\d+)PT(\\d+)S*", filename)
+    # Updated regex to handle both numeric durations and '0inf0'
+    match = re.match(r"^(.*?[^Z]*)Z(\d+)PT((\d+)|0inf0)S*", filename)
     if match:
         prefix = match.group(1)  # Characters before 'Z'
         number = int(match.group(2))
-        duration = int(match.group(3))
+
+        # Handle duration as either a number or infinity
+        if match.group(3) == "0inf0":
+            duration = float('inf')
+        else:
+            duration = int(match.group(3))
+
         return number, prefix, duration
     else:
+        #TODO: Raise Exception here
         return -1, "", ""
 
 
@@ -87,7 +95,19 @@ def traverse_and_convert():
                     ca.convert_csv2auto(subdir + "/", entry, path + "/")
 
 
+def abstract_timestamps(search_path):
+    for parent, dirs, files in os.walk(search_path):
+        for file in files:
+            if file.endswith(".csv"):
+                input_file = os.path.join(parent, file)
+                print(input_file)
+                output_file = input_file.removesuffix(".csv").removesuffix('abstracted') + 'abstracted.csv'
+                if not os.path.exists(output_file):
+                    abs_t.abstract_timestamp(input_file, output_file, 'd')
+
+
 if __name__ == "__main__":
-    traverse_and_convert()
-    traverse_and_compute_risk()
+    abstract_timestamps("/home/fabian/Github/Bachelor_thesis_z_filter/data/data_csv/Sepsis Cases - Event Log/")
+    # traverse_and_convert()
+    # traverse_and_compute_risk()
     # traverse_and_convert()

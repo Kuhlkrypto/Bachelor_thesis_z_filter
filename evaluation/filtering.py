@@ -6,7 +6,8 @@ import pandas as pd
 
 
 def filter_log(log_path, z, t, modi):
-    binary_arg = os.path.join("/home/fabian/Github/Bachelor_thesis_z_filter/target/release/z-anon-impl")
+    dir = os.getcwd()
+    binary_arg = os.path.join(dir, "bin/z-anon-impl")
 
     try:
         res = subprocess.run(
@@ -17,7 +18,7 @@ def filter_log(log_path, z, t, modi):
              modi],
             check=True,
             text=True,
-                # capture_output=True  # Um die Ausgabe zu erfassen
+            capture_output=True  # Um die Ausgabe zu erfassen
         )
         res.check_returncode()
 
@@ -26,14 +27,13 @@ def filter_log(log_path, z, t, modi):
         exit(1)
 
 
-def generate_z_values(file_path, percentages=[0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.2]):
+def generate_z_values(file_path, percentages=constants.FILTERING_RELATIVE_ZS):
     # CSV-Datei einlesen
     df = pd.read_csv(file_path, sep=constants.DELIMITER)
 
     # Anzahl der einzigartigen Identifier
     unique_values = df["case_id"].unique()
     unique_count = len(unique_values)
-    print(unique_count)
 
     # Berechnung der z-Werte
     z_values = [max(1, int(math.ceil(unique_count * p))) for p in percentages]
@@ -44,28 +44,62 @@ def generate_z_values(file_path, percentages=[0.001, 0.005, 0.01, 0.05, 0.1, 0.1
 DEPTH_MAX = 1
 
 
-def traverse_and_filter(directory: str, depth, t_l=['1h', '24h', '72h', 'inf'], modi=['0', '1']):
+def convert_seconds(t: str):
+    res = 'PT'
+    middle = ''
+    if t == 'inf':
+        middle = '0inf0'
+    elif t.endswith('h'):
+        t = t.removesuffix('h')
+        middle = str(int(t) * 3600)
+    elif t.endswith('m'):
+        t = t.removesuffix('m')
+        middle = str(int(t) * 60)
+    else:
+        return t
+    return res + middle + 'S.csv'
+
+
+def already_filtered(folder, file: str, z, t, mode) -> bool:
+    p = None
+    if mode == '0':
+        p = os.path.join(folder, "results_filtering_classic")
+    else:
+        p = os.path.join(folder, "results_filtering_improved")
+    basename = file.removesuffix('.csv') + 'Z' + str(z) + convert_seconds(t)
+    return os.path.exists(os.path.join(p, basename))
+
+
+def filter_directory(parent, t_l=constants.FILTERING_TIME_DELTAS, modi=constants.FILTERING_MODES):
+    for entry in os.listdir(parent):
+        path = str(os.path.join(parent, entry))
+        if os.path.isdir(path) or entry.__contains__('abstracted') or not entry.__contains__('.csv'):
+            continue
+        z_l = constants.FILTERING_ABSOLUTE_ZS | set(generate_z_values(path))
+        if z_l.__contains__(0):
+            z_l.remove(0)
+        for m in modi:
+            for t in t_l:
+                for z in z_l:
+                    if already_filtered(parent, entry, z, t, m):
+                        print(f"Z: {z}, t: {t}, m:{m} - SKIPPED")
+                        continue
+                    print(f"Z: {z}, t: {t}, m:{m}")
+                    filter_log(path, z, t, m)
+
+
+def traverse_and_filter(directory: str, depth, t_l=constants.FILTERING_TIME_DELTAS, modi=constants.FILTERING_MODES):
     if depth >= DEPTH_MAX:
         return
-    for (parent, dirs, files) in os.walk(directory):
-        for file in files:
-            path = str(os.path.join(parent, file))
-            print(str(path))
-            former_z = 0
-            # z_l = generate_z_values(path)
-            z_l = {15, 30, 45, 60} | set(generate_z_values(path))
-            for z in z_l:
-                if z == former_z:
-                    continue
-                former_z = z
-                for t in t_l:
-                    for m in modi:
-                        print(f"Z: {z}, t: {t}, m:{m}")
-                        filter_log(path, z, t, m)
+
+    for entry in os.listdir(directory):
+        parent = os.path.join(directory, entry)
+        if os.path.isdir(parent):
+            filter_directory(parent, t_l, modi)
 
 
 if __name__ == "__main__":
     # # filter_log("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/Road_Traffic_Fine_Management_Process/Road_Traffic_Fine_Management_Process.csv", 1, "3600h")
-    base_directory = "/home/fabian/Github/Bachelor_thesis_z_filter/data/data_csv/"
+    base_directory = "/home/fabian/Github/Bachelor_thesis_z_filter/data/Sepsis Cases - Event Log/"
     # # filter_log("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/Road_Traffic_Fine_Management_Process/Road_Traffic_Fine_Management_Process.csv", 1, "3600h", "0")
-    traverse_and_filter(base_directory, 0)
+    filter_directory(base_directory)

@@ -8,7 +8,7 @@ pub struct RoadTrafficKeyedData ;
 impl KeywordProvider for RoadTrafficKeyedData {
     fn keywords_source() -> Vec<String> {
         //not in every event, will get replaced with activity attribute some time 
-        vec!["org:resource".to_string()]
+        vec!["STAGE".to_string()]
     }
 
     fn keywords_activity() -> Vec<String> {

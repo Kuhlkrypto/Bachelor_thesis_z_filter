@@ -106,10 +106,12 @@ def convert_csv2auto(path_data_sources, csv_source_file_name, path_data_export):
     if not os.path.exists(path_data_export):
         os.makedirs(path_data_export)
     # write to disk
-    print(path_data_export)
     df_for_export.to_csv(path_or_buf=path_data_export + filename_concat)
     return path_data_export, filename_concat
 
 
 if __name__ == "__main__":
-    convert_csv2auto("/data/data_csv_hard/Hospital_log/", "Hospital_log.csv", "/data/data_xes/")
+    path = "/data/data_csv_hard_privacy/BPI Challenge 2017/"
+    print(convert_csv2auto(
+        "/data/data_csv_hard_privacy/BPI Challenge 2017/",
+        "BPI Challenge 2017.csv", "/home/fabian/Github/Bachelor_thesis_z_filter/tmp"))

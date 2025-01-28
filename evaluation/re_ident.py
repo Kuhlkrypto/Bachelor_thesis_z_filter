@@ -7,12 +7,16 @@ Crowd: The Privacy Bounds of Human Mobility. Scientific Reports 3 (2013) 1376
 March, 2020
 
 """
+import math
+
 import pandas as pd
+# import modin.pandas as pd
+# import swifter
 import numpy as np
 import random
 import sys
 
-# from scipy.stats import itemfreq
+from concurrent.futures import ProcessPoolExecutor
 
 
 def generate_projection_view(projections_local, case_attribute_local, activity_local, event_attribute_local,
@@ -43,17 +47,18 @@ def prepare_data(events, data, attributes_local):
     """ Put the data in the right format. The column of the activities and event
     attributes consist of a list with the corresponding events.
     """
+
     for event in events:
         filter_col = [col for col in data if col.startswith(event)]
         col_name = event + '_combined'
         attributes_local.append(col_name)
         if type(data[filter_col[0]][0]).__name__ == 'str':
             data[col_name] = data[filter_col].apply(lambda row: row.tolist(), axis=1)
-            data[col_name] = data[col_name].apply(helps)
+            data[col_name] = data[col_name].apply(rm_nans)
         else:
             data[filter_col] = data[filter_col].astype(str)
             data[col_name] = data[filter_col].apply(lambda row: row.tolist(), axis=1)
-            data[col_name] = data[col_name].apply(helps)
+            data[col_name] = data[col_name].apply(rm_nans)
     return data[attributes_local]
 
 
@@ -68,64 +73,31 @@ def calculate_unicity(data, qi, events, number_points):
     The sum(uniques) represents the number of cases that are unique with the given points.
     3. Unicity is then the proportion of unique cases compared to the total number of cases.
     """
-
-    if number_points > 1:
+    if number_points > 0:
         data = generate_random_points_absolute(data, events[0], number_points)
     else:
         data = generate_random_points(data, events[0], number_points)
-
     for k in range(1, len(events)):
         event = events[k]
         col_name = event + '_combined'
         col_name_new = event + '_points'
         data[col_name_new] = data.apply(make_otherpoints, args=[col_name, events[0]], axis=1)
 
+    # very time consuming when used sequentially
     uniques = data.apply(uniqueness, args=[qi, events, data], axis=1)
+
     unicity = sum(uniques) / len(data)
-    return unicity
-
-
-# def generate_random_points(data, activity_local, number_points_local):
-#     """ generates random points depending on the relative frequency """
-#     data['random_p'] = data.apply(lambda x:
-#                                   random.sample(list(enumerate(x[activity_local + '_combined'])),
-#                                                 int(len(x[activity_local + '_combined']) * number_points_local))
-#                                   if (int(len(x[activity_local + '_combined']) * number_points_local) > 1)
-#                                   else random.sample(list(enumerate(x[activity_local + '_combined'])), 1), axis=1)
-#     data['random_points_number'] = data.apply(lambda x: len(x.random_p), axis=1)
-#     data[activity_local + '_points'] = data.apply(makepoints, axis=1)
-#     data[activity_local + 'random_index'] = data.apply(getindex, axis=1)
-#     return data
+    return number_points, unicity
 
 
 def generate_random_points(data, activity_local, number_points_local):
-    """Generates random points depending on the relative frequency."""
-
-    def safe_sample(row):
-        population = list(enumerate(row.get(activity_local + '_combined', [])))
-
-        # # Debug-Ausgabe
-        # print(f"Population: {population}")
-
-        if not population:  # Wenn die Population leer ist
-            # print("Population ist leer. Keine Punkte werden gesampelt.")
-            return []  # Leere Liste zurückgeben
-
-        # Berechnung der Sample-Größe
-        sample_size = max(1, min(len(population), int(len(population) * number_points_local)))
-
-        # Debug-Ausgabe
-        # print(f"Sample size: {sample_size}")
-
-        # Sampling durchführen
-        return random.sample(population, sample_size)
-
-    data['random_p'] = data.apply(lambda x: safe_sample(x), axis=1)
-    # print("Random points generated:", data['random_p'].head())  # Debug-Ausgabe
-
+    """ generates random points depending on the relative frequency """
+    data['random_p'] = data.apply(lambda x:
+                                  random.sample(list(enumerate(x[activity_local + '_combined'])),
+                                                int(len(x[activity_local + '_combined']) * number_points_local))
+                                  if (int(len(x[activity_local + '_combined']) * number_points_local) > 1)
+                                  else random.sample(list(enumerate(x[activity_local + '_combined'])), 1), axis=1)
     data['random_points_number'] = data.apply(lambda x: len(x.random_p), axis=1)
-    # print("Number of random points per row:", data['random_points_number'].head())  # Debug-Ausgabe
-
     data[activity_local + '_points'] = data.apply(makepoints, axis=1)
     data[activity_local + 'random_index'] = data.apply(getindex, axis=1)
     return data
@@ -145,22 +117,6 @@ def generate_random_points_absolute(data, activity_local, number_points_local):
     return data
 
 
-# def check_subset(data, subset):
-#     """frequency of each element than compare them"""
-#     if all(elem in data for elem in subset):
-#         data_freq = itemfreq(data)
-#         subset_freq = itemfreq(subset)
-#         for elem in subset_freq:
-#             if elem[0] in data_freq[:, 0]:
-#                 itemindex = np.where(data_freq[:, 0] == elem[0])
-#                 if (len(elem[0]) != len(data_freq[itemindex][0][0])) or \
-#                         (int(data_freq[itemindex][0][1]) < int(elem[1])):
-#                     return False
-#             else:
-#                 return False
-#         return True
-#     return False
-
 def check_subset(data, subset):
     if all(elem in data for elem in subset):
         data_vals, data_counts = np.unique(data, return_counts=True)
@@ -175,7 +131,6 @@ def check_subset(data, subset):
                 return False
         return True
     return False
-
 
 
 def makepoints(x):
@@ -201,9 +156,21 @@ def make_otherpoints(x, event, act):
     return points
 
 
-def helps(x):
-    n = len(x) - pd.Series(x).last_valid_index()
-    del x[-n:]
+def rm_nans(x):
+    """
+    Removes all None values from list x. The list must contain None values (if any), starting at an index
+    to the end of the list
+    :param x: list containing str and Nonevalues
+    :return: list only containing str values
+    """
+    # returns the last valid index where the value is not None
+    i = pd.Series(x).last_valid_index()
+    if len(x) > 1 and pd.Series(x).isna().any:
+        n = len(x) - i
+        if i == 0:
+            del x[1:]
+        else:
+            del x[-n:]
     return x
 
 
@@ -243,7 +210,9 @@ def risk_re_ident_quant(path_data_sources, csv_source_file_name, projection='A')
 
     # read csv. data from disk
     df_data = pd.read_csv(filepath_or_buffer=path_data_sources + csv_source_file_name, delimiter=csv_delimiter,
-                          low_memory=False, nrows=100)
+                          low_memory=False,
+                          # nrows=15000
+                          )
 
     # Specify columns
     unique_identifier = ['case_id']
@@ -258,21 +227,34 @@ def risk_re_ident_quant(path_data_sources, csv_source_file_name, projection='A')
     # C: activities and event attributes
     # D: activities and case attributes
     # E: activities
-
+    number_points_total = int((len(df_data.columns) - 1) / 2)
+    values = [math.ceil(0.3 * number_points_total), math.ceil(0.6 * number_points_total),
+              math.ceil(0.9 * number_points_total)]
+    # values =[1]
     # Specify number or relative frequency of points
-    number_points = 1
-
     # # # # # # # # # # # # # # # # # # # # #
     # Data preparation concatenating events
     quasi_identifier, events_to_concat = generate_projection_view(projection, case_attribute, activity,
                                                                   event_attribute, timestamp)
+    # identifier attributes
     attributes = unique_identifier + quasi_identifier
-    df_aggregated_data = prepare_data(events_to_concat, df_data, attributes)
-    print("Data preparation finished")
 
-    unicity = calculate_unicity(df_aggregated_data, quasi_identifier, events_to_concat, number_points)
-    print(unicity)
-    return unicity
+    df_aggregated_data = prepare_data(events_to_concat, df_data, attributes)
+    res = []
+
+    with ProcessPoolExecutor() as executor:
+        futures = []
+        for val in values:
+            futures.append(
+                executor.submit(calculate_unicity, df_aggregated_data, quasi_identifier, events_to_concat, val))
+
+        for future in futures:
+            res.append(future.result())
+    return sorted(res, key=lambda x: x[0])
+
 
 if __name__ == "__main__":
-    risk_re_ident_quant("/data/data_xes/Hospital_log/", "Hospital_log_activity-timestamp.csv")
+    print(risk_re_ident_quant("/home/fabian/Github/Bachelor_thesis_z_filter/tmpBPIChallenge2017/",
+                              "BPIChallenge2017_activity-timestamp.csv"))
+    # print(risk_re_ident_quant("/home/fabian/Github/Bachelor_thesis_z_filter/tmp/SepsisCases-EventLog/",
+    #                           "SepsisCases-EventLog_activity-timestamp.csv"))

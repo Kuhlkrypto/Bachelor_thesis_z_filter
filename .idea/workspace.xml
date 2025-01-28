@@ -8,16 +8,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3601d5c6-4331-4b0c-a297-187eba8424fb" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/evaluation/constants.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/evaluation/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/abstract_timestamps.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_parser/src/keywords/activites_mannheim.rs" beforeDir="false" afterPath="$PROJECT_DIR$/data_parser/src/keywords/activites_mannheim.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_parser/src/keywords/road_traffic.rs" beforeDir="false" afterPath="$PROJECT_DIR$/data_parser/src/keywords/road_traffic.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_parser/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/data_parser/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/abstract_timestamps.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/abstract_timestamps.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/evaluation/compute.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/compute.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/constants.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/constants.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/csv2auto.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/csv2auto.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/evaluation/filtering.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/filtering.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/evaluation/measurement.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/measurement.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/priv_metrik.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/evaluation/re_ident.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/re_ident.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/result_printer.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/testerstest.png" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/evaluation/visualize.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/visualize.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/z_filtering/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/z_filtering/src/main.rs" afterDir="false" />
     </list>
@@ -87,14 +91,14 @@
 }</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/evaluation" />
-      <recent name="$PROJECT_DIR$/data_csv" />
-      <recent name="$PROJECT_DIR$" />
-      <recent name="$PROJECT_DIR$/data_csv_hard" />
-      <recent name="$PROJECT_DIR$/evaluation/results" />
+      <recent name="$PROJECT_DIR$/work_data" />
+      <recent name="$PROJECT_DIR$/bin" />
+      <recent name="$PROJECT_DIR$/data/data_xes" />
+      <recent name="$PROJECT_DIR$/data/data_csv_hard_privacy" />
+      <recent name="$PROJECT_DIR$/data/data_xes/new" />
     </key>
   </component>
-  <component name="RunManager" selected="Cargo.Run z-anon-impl">
+  <component name="RunManager" selected="Cargo.Run data_parser">
     <configuration name="Run data_parser" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="command" value="run --package data_parser --bin data_parser" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -164,28 +168,6 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
-    <configuration name="compute" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Bachelor_thesis_z_filter" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/evaluation" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluation/compute.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="filtering" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Bachelor_thesis_z_filter" />
       <option name="ENV_FILES" value="" />
@@ -252,6 +234,33 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="re_ident" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Bachelor_thesis_z_filter" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/evaluation" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluation/re_ident.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Cargo.Run data_parser" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="RustProjectSettings">
     <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
@@ -284,6 +293,10 @@
       <workItem from="1737394922192" duration="288000" />
       <workItem from="1737471385691" duration="10000" />
       <workItem from="1737472848973" duration="2293000" />
+      <workItem from="1737727256777" duration="699000" />
+      <workItem from="1737731973103" duration="34000" />
+      <workItem from="1737919980248" duration="540000" />
+      <workItem from="1737921198607" duration="635000" />
     </task>
     <servers />
   </component>

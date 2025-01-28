@@ -9,10 +9,11 @@ use crate::keywords::road_traffic::RoadTrafficKeyedData;
 use crate::keywords::Sepsis_cases::SepsisCasesKeywords;
 
 fn main() {
-    let data_path_raw = Path::new("/home/fabian/Github/Bachelor_thesis_z_filter/data_xes");
-    let result_path = "/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/";
+    let data_path_raw = Path::new("/home/fabian/Github/Bachelor_thesis_z_filter/data/data_xes/new");
+    let result_path = "/home/fabian/Github/Bachelor_thesis_z_filter/data/data_csv/";
     let entries = fs::read_dir(&data_path_raw).unwrap();
     for entry in entries {
+        println!("{:?}", entry);
         let log;
         if let Ok(ref entry) = entry {
             if entry.file_name().to_str().unwrap().starts_with("edited") || entry.file_name().to_str().unwrap().starts_with("activitylog") {
@@ -27,7 +28,8 @@ fn main() {
             }else if entry.file_name().to_str().unwrap().starts_with("BPI") {
                 //BPI 12, 17 and 18 have the same keywords
                 log = logfile_parser::parse_anything_known::<Bpi2017>(entry.path().to_str().unwrap())
-
+            } else if entry.file_name().to_str().unwrap().starts_with("CCC19") {
+                log = logfile_parser::parse_anything_known::<RoadTrafficKeyedData>(entry.path().to_str().unwrap())
             }
             else { continue; }
             let filename = entry.file_name().to_str().unwrap().strip_suffix(".xes").unwrap().to_string();

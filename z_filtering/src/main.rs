@@ -27,7 +27,6 @@ async fn kickoff(log: EventSourceLog, config: Config, filter_method: ZFilteringM
     }
 }
 
-
 fn help_parse(arg: Option<String>) -> u32 {
     if let Some(n_val) = arg {
         if let Ok(n_val) = n_val.parse::<u32>() {

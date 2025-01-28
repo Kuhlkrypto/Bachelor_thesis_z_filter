@@ -97,9 +97,9 @@ def traverse_and_filter(directory: str, depth, t_l=constants.FILTERING_TIME_DELT
         if os.path.isdir(parent):
             filter_directory(parent, t_l, modi)
 
-
-if __name__ == "__main__":
-    # # filter_log("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/Road_Traffic_Fine_Management_Process/Road_Traffic_Fine_Management_Process.csv", 1, "3600h")
-    base_directory = "/home/fabian/Github/Bachelor_thesis_z_filter/data/Sepsis Cases - Event Log/"
-    # # filter_log("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/Road_Traffic_Fine_Management_Process/Road_Traffic_Fine_Management_Process.csv", 1, "3600h", "0")
-    filter_directory(base_directory)
+#
+# if __name__ == "__main__":
+#     # # filter_log("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/Road_Traffic_Fine_Management_Process/Road_Traffic_Fine_Management_Process.csv", 1, "3600h")
+#     base_directory = "/home/fabian/Github/Bachelor_thesis_z_filter/data/Sepsis Cases - Event Log/"
+#     # # filter_log("/home/fabian/Github/Bachelor_thesis_z_filter/data_csv/Road_Traffic_Fine_Management_Process/Road_Traffic_Fine_Management_Process.csv", 1, "3600h", "0")
+#     filter_directory(base_directory)

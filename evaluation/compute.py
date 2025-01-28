@@ -43,8 +43,8 @@ def extract_number_and_prefix(filename):
     else:
         #TODO: Raise Exception here
         return -1, "", ""
-
-if __name__ == "__main__":
-    log = import_csv("/home/fabian/Github/Bachelor_thesis_z_filter/data/data_csv_hard_petri/Hospital_log/Hospital_log.csv")
-    net, im , fm = pm4py.discover_petri_net_heuristics(log)
-    pm4py.view_petri_net(net, im, fm)
+#
+# if __name__ == "__main__":
+#     log = import_csv("/home/fabian/Github/Bachelor_thesis_z_filter/data/data_csv_hard_petri/Hospital_log/Hospital_log.csv")
+#     net, im , fm = pm4py.discover_petri_net_heuristics(log)
+#     pm4py.view_petri_net(net, im, fm)

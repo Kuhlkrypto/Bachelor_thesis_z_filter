@@ -9,21 +9,6 @@
   <component name="ChangeListManager">
     <list default="true" id="3601d5c6-4331-4b0c-a297-187eba8424fb" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_parser/src/keywords/activites_mannheim.rs" beforeDir="false" afterPath="$PROJECT_DIR$/data_parser/src/keywords/activites_mannheim.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_parser/src/keywords/road_traffic.rs" beforeDir="false" afterPath="$PROJECT_DIR$/data_parser/src/keywords/road_traffic.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data_parser/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/data_parser/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/abstract_timestamps.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/abstract_timestamps.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/compute.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/compute.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/constants.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/constants.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/csv2auto.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/csv2auto.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/filtering.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/filtering.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/measurement.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/measurement.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/priv_metrik.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/re_ident.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/re_ident.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/visualize.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/visualize.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/z_filtering/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/z_filtering/src/main.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -91,14 +76,31 @@
 }</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/data_work" />
+      <recent name="$PROJECT_DIR$/data/data_xes/new" />
+      <recent name="$PROJECT_DIR$/data/data_xes" />
       <recent name="$PROJECT_DIR$/work_data" />
       <recent name="$PROJECT_DIR$/bin" />
-      <recent name="$PROJECT_DIR$/data/data_xes" />
-      <recent name="$PROJECT_DIR$/data/data_csv_hard_privacy" />
-      <recent name="$PROJECT_DIR$/data/data_xes/new" />
     </key>
   </component>
-  <component name="RunManager" selected="Cargo.Run data_parser">
+  <component name="RunManager" selected="Python.filtering">
+    <configuration default="true" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
+      <option name="command" value="run" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$/z_filtering" />
+      <envs />
+      <option name="emulateTerminal" value="true" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="Run data_parser" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="command" value="run --package data_parser --bin data_parser" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -136,23 +138,6 @@
     </configuration>
     <configuration name="Test z-anon-impl" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="test --workspace" />
-      <option name="workingDirectory" value="file://$PROJECT_DIR$/z_filtering" />
-      <envs />
-      <option name="emulateTerminal" value="true" />
-      <option name="channel" value="DEFAULT" />
-      <option name="requiredFeatures" value="true" />
-      <option name="allFeatures" value="false" />
-      <option name="withSudo" value="false" />
-      <option name="buildTarget" value="REMOTE" />
-      <option name="backtrace" value="SHORT" />
-      <option name="isRedirectInput" value="false" />
-      <option name="redirectInputPath" value="" />
-      <method v="2">
-        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-      <option name="command" value="run" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$/z_filtering" />
       <envs />
       <option name="emulateTerminal" value="true" />
@@ -256,11 +241,6 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Cargo.Run data_parser" />
-      </list>
-    </recent_temporary>
   </component>
   <component name="RustProjectSettings">
     <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
@@ -297,6 +277,7 @@
       <workItem from="1737731973103" duration="34000" />
       <workItem from="1737919980248" duration="540000" />
       <workItem from="1737921198607" duration="635000" />
+      <workItem from="1738079790277" duration="736000" />
     </task>
     <servers />
   </component>

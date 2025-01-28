@@ -109,9 +109,9 @@ def convert_csv2auto(path_data_sources, csv_source_file_name, path_data_export):
     df_for_export.to_csv(path_or_buf=path_data_export + filename_concat)
     return path_data_export, filename_concat
 
-
-if __name__ == "__main__":
-    path = "/data/data_csv_hard_privacy/BPI Challenge 2017/"
-    print(convert_csv2auto(
-        "/data/data_csv_hard_privacy/BPI Challenge 2017/",
-        "BPI Challenge 2017.csv", "/home/fabian/Github/Bachelor_thesis_z_filter/tmp"))
+#
+# if __name__ == "__main__":
+#     path = "/data/data_csv_hard_privacy/BPI Challenge 2017/"
+#     print(convert_csv2auto(
+#         "/data/data_csv_hard_privacy/BPI Challenge 2017/",
+#         "BPI Challenge 2017.csv", "/home/fabian/Github/Bachelor_thesis_z_filter/tmp"))

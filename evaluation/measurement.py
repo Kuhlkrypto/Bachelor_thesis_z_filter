@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 class Measurement:
 
-    def __init__(self, result_path):
+    def __init__(self, result_path, result_name):
         # log used for comparison
         self.unfiltered_log = None
         # init result dicts
@@ -29,6 +29,7 @@ class Measurement:
         self.basename_orig = ''
         # path where to print results
         self.result_path = result_path
+        self.result_name = result_name
 
     def init_dict(self):
         return {
@@ -158,11 +159,12 @@ class Measurement:
 
         # utilize metrics for utility (quality dimensions)
         self.__metrics_utility_log(net, im, fm, log_df, z_val, dt_val)
+        self.write_to_csv()
 
     def __set_dict(self, dict):
         self.results = dict
 
-    def write_to_csv(self, basename):
+    def write_to_csv(self):
         """
             Writes member hashmap into a csv-file at the path provided at construction.
 
@@ -178,7 +180,7 @@ class Measurement:
                 raise ValueError("Entries arent equal long!")
 
             # Schreiben der Hashmap in die CSV-Datei
-            with open(f"{self.result_path}/{basename}.csv", mode='w', newline='', encoding='utf-8') as csv_file:
+            with open(f"{self.result_path}/{self.result_name}.csv", mode='w', newline='', encoding='utf-8') as csv_file:
                 writer = csv.DictWriter(csv_file, fieldnames=filtered_hashmap.keys())
                 writer.writeheader()
                 rows = [dict(zip(filtered_hashmap.keys(), row)) for row in zip(*filtered_hashmap.values())]
@@ -261,11 +263,10 @@ def traverse_and_measure(directory: str, abstracted: bool):
         full_path = os.path.join(directory, entry)
         # if os.path.isfile(full_path):
         if os.path.isdir(full_path):
-            with tqdm(total=count_csv_files(directory) / 2,
+            with tqdm(total=(count_csv_files(directory) - 1) / 4,
                       desc=os.path.basename(directory) if not abstracted else os.path.basename(directory)+'_abstracted',
                       unit='file') as pbar:
                 # prepare Measurement object
-                ms = Measurement(os.path.join(os.getcwd(), "tmp/"))
                 # prepare file path to csv file
                 # distinguish between abstracted (generalized timestamps) files and `normal' ones
                 if abstracted:
@@ -273,6 +274,7 @@ def traverse_and_measure(directory: str, abstracted: bool):
                 else:
                     b_name = str(os.path.basename(directory)).removesuffix(".csv")
                 basename = b_name + ".csv"
+                ms = Measurement(os.path.join(os.getcwd(), "tmp/"), b_name + str(entry))
 
                 # Compute qualitites of unfiltered / base event log
 
@@ -283,7 +285,7 @@ def traverse_and_measure(directory: str, abstracted: bool):
                 measure_other_nets(full_path, ms, abstracted, pbar)
 
                 # write results dict to csv file
-                ms.write_to_csv(b_name + str(entry))
+                ms.write_to_csv()
 
 
 def traverse(path):
@@ -329,16 +331,20 @@ def count_csv_files(path: str):
     return count
 
 
-# if __name__ == "__main__":
-#
-#     directory = ''
-#     # traverse_and_build_petri_nets(directory)
-#     # traverse()
-#     with ProcessPoolExecutor() as executor:
-#         futures = [
-#             executor.submit(traverse_and_measure, directory, False),
-#                    executor.submit(traverse_and_measure, directory, True)
-#                    ]
-#
-#         for f in futures:
-#             f.result()
+if __name__ == "__main__":
+
+    directory = './results/Hospital_log/Hospital_log.csv'
+    log = compute.import_csv(directory)
+
+    net, im, fm = pm4py.discover_petri_net_inductive(log, multi_processing=True)
+    pm4py.view_petri_net(net, im, fm)
+    # traverse_and_build_petri_nets(directory)
+    # traverse()
+    # with ProcessPoolExecutor() as executor:
+    #     futures = [
+    #         executor.submit(traverse_and_measure, directory, False),
+    #                executor.submit(traverse_and_measure, directory, True)
+    #                ]
+
+    #     for f in futures:
+    #         f.result()

@@ -228,8 +228,9 @@ def risk_re_ident_quant(path_data_sources, csv_source_file_name, projection='A')
     # D: activities and case attributes
     # E: activities
     number_points_total = int((len(df_data.columns) - 1) / 2)
-    values = [math.ceil(0.3 * number_points_total), math.ceil(0.6 * number_points_total),
-              math.ceil(0.9 * number_points_total)]
+    # values = [math.ceil(0.3 * number_points_total), math.ceil(0.6 * number_points_total),
+    #           math.ceil(0.9 * number_points_total)]
+    values = [1,5,8]
     # values =[1]
     # Specify number or relative frequency of points
     # # # # # # # # # # # # # # # # # # # # #
@@ -254,7 +255,7 @@ def risk_re_ident_quant(path_data_sources, csv_source_file_name, projection='A')
 
 
 if __name__ == "__main__":
-    print(risk_re_ident_quant("/home/fabian/Github/Bachelor_thesis_z_filter/tmpBPIChallenge2017/",
-                              "BPIChallenge2017_activity-timestamp.csv"))
+    print(risk_re_ident_quant("/home/fabian/Github/Bachelor_thesis_z_filter/tmpHospital_log/",
+                              "Hospital_log_activity-timestamp.csv"))
     # print(risk_re_ident_quant("/home/fabian/Github/Bachelor_thesis_z_filter/tmp/SepsisCases-EventLog/",
     #                           "SepsisCases-EventLog_activity-timestamp.csv"))

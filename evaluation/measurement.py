@@ -57,28 +57,22 @@ class Measurement:
         self.basename_orig = basename
 
     def fitness(self, event_log, net, initial_m, final_m):
-        fitness = replay_fitness_algorithm.apply(event_log,
-                                                 net,
-                                                 initial_m,
-                                                 final_m,
-                                                 variant=replay_fitness_algorithm.Variants.TOKEN_BASED,
-                                                 parameters=constants.METRIC_PARAMETERS)
+        fitness = pm4py.fitness_alignments(event_log, net, im, fm, multi_processing=True)
         # print(f"fitness: {fitness}")
         return fitness['log_fitness']
 
-    def simplicity(self, net):
-        simplicity = simplicity_algorithm.apply(net, parameters=constants.METRIC_PARAMETERS)
+    def simplicity(self, net, im, fm):
+        simplicity = pm4py.simplicity_petri_net(net, im, fm)
         # print(f"simplicity: {simplicity}")
         return simplicity
 
     def precision(self, event_log, net, im, fm):
-        precision = precision_algorithm.apply(event_log, net, im, fm, variant=variants.etconformance_token,
-                                              parameters=constants.METRIC_PARAMETERS)
+        precision = pm4py.precision_alignments(event_log, net, im, fm, multi_processing=True)
         # print(f"Precision: {precision}")
         return precision
 
     def generality(self, event_log, net, im, fm):
-        generality = generalization_algorithm.apply(event_log, net, im, fm, parameters=constants.METRIC_PARAMETERS)
+        generality = pm4py.generalization_tbr(log, net, im, fm)
         # print(f"Generality: {generality}")
         return generality
 
@@ -86,7 +80,7 @@ class Measurement:
         self.results["Z"].append(z_val)
         self.results["dT"].append(dt_val)
         with ProcessPoolExecutor() as executor:
-            sim = executor.submit(self.simplicity, net)
+            sim = executor.submit(self.simplicity, net, im, fm)
             gen = executor.submit(self.generality, log, net, im, fm)
             fit = executor.submit(self.fitness, log, net, im, fm)
             prec = executor.submit(self.precision, log, net, im, fm)
@@ -338,6 +332,8 @@ if __name__ == "__main__":
 
     net, im, fm = pm4py.discover_petri_net_inductive(log, multi_processing=True)
     pm4py.view_petri_net(net, im, fm)
+
+
     # traverse_and_build_petri_nets(directory)
     # traverse()
     # with ProcessPoolExecutor() as executor:

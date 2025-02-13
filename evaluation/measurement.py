@@ -56,7 +56,7 @@ class Measurement:
         self.unfiltered_log = log
         self.basename_orig = basename
 
-    def fitness(self, event_log, net, initial_m, final_m):
+    def fitness(self, event_log, net, im, fm):
         fitness = pm4py.fitness_alignments(event_log, net, im, fm, multi_processing=True)
         # print(f"fitness: {fitness}")
         return fitness['log_fitness']
@@ -71,7 +71,7 @@ class Measurement:
         # print(f"Precision: {precision}")
         return precision
 
-    def generality(self, event_log, net, im, fm):
+    def generality(self, log, net, im, fm):
         generality = pm4py.generalization_tbr(log, net, im, fm)
         # print(f"Generality: {generality}")
         return generality
@@ -165,14 +165,13 @@ class Measurement:
             basename: name of the csv file
             """
         try:
-            self.sort_dict_according_to_z()
+            filtered_hashmap = self.sort_dict_according_to_z()
             # only consider keys with value-list-size greater 0
-            filtered_hashmap = {k: v for k, v in self.results.items() if len(v) > 0}
             # Sicherstellen, dass alle Listen in der Hashmap die gleiche Länge haben
             lengths = [len(v) for v in filtered_hashmap.values()]
             if len(set(lengths)) > 1:
                 raise ValueError("Entries arent equal long!")
-
+            print(filtered_hashmap)
             # Schreiben der Hashmap in die CSV-Datei
             with open(f"{self.result_path}/{self.result_name}.csv", mode='w', newline='', encoding='utf-8') as csv_file:
                 writer = csv.DictWriter(csv_file, fieldnames=filtered_hashmap.keys())
@@ -188,8 +187,10 @@ class Measurement:
         self.results = self.init_dict()
 
     def sort_dict_according_to_z(self):
-        sorted_indices = sorted(range(len(self.results["Z"])), key=lambda i: self.results["Z"][i])
-        self.results = {key: [value[i] for i in sorted_indices] for key, value in self.results.items()}
+        filtered_hashmap = {k: v for k, v in self.results.items() if len(v) > 0}
+        sorted_indices = sorted(range(len(filtered_hashmap["Z"])), key=lambda i: filtered_hashmap["Z"][i])
+        filtered_hashmap = {key: [value[i] for i in sorted_indices] for key, value in filtered_hashmap.items()}
+        return filtered_hashmap
 
     def read_from_csv(self, csv_file_path):
         """
@@ -328,10 +329,10 @@ def count_csv_files(path: str):
 if __name__ == "__main__":
 
     directory = './results/Hospital_log/Hospital_log.csv'
-    log = compute.import_csv(directory)
-
-    net, im, fm = pm4py.discover_petri_net_inductive(log, multi_processing=True)
-    pm4py.view_petri_net(net, im, fm)
+    # log = compute.import_csv(directory)
+    #
+    # net, im, fm = pm4py.discover_petri_net_inductive(log, multi_processing=True)
+    # pm4py.view_petri_net(net, im, fm)
 
 
     # traverse_and_build_petri_nets(directory)

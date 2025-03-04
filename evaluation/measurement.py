@@ -1,130 +1,231 @@
 import csv
 import os
-import constants
+
+import constants as con
 from concurrent.futures import ProcessPoolExecutor
 
-import pandas.errors
-import compute
+import file_utilities as utils
 import pm4py
-from pm4py.algo.evaluation.replay_fitness import algorithm as replay_fitness_algorithm
-from pm4py.algo.evaluation.precision import algorithm as precision_algorithm
-from pm4py.algo.evaluation.generalization import algorithm as generalization_algorithm
-from pm4py.algo.evaluation.simplicity import algorithm as simplicity_algorithm
-from pm4py.visualization.petri_net import visualizer as pn_visualizer
-from pm4py.visualization.process_tree import visualizer as pt_visualizer
-from pm4py.algo.evaluation.precision import variants
-from csv2auto import convert_csv2auto as csv2auto
-from re_ident import risk_re_ident_quant
+from csv2simple_auto import convert_csv2auto as csv2auto
+from unicity_activities import risk_re_ident_quant
 from tqdm import tqdm
 
 
 class Measurement:
 
-    def __init__(self, result_path, result_name):
-        # log used for comparison
-        self.unfiltered_log = None
-        # init result dicts
-        self.results = self.init_dict()
-        # original basename
-        self.basename_orig = ''
-        # path where to print results
-        self.result_path = result_path
-        self.result_name = result_name
+    def __init__(self, result_name):
+        """
+        Initializes the Measurement instance.
 
-    def init_dict(self):
-        return {
-            "Z": [],
-            "dT": [],
-            "Fitness": [],
-            "Fitness_cmp": [],
-            "Precision": [],
-            "Precision_cmp": [],
-            "Generality": [],
-            "Generality_cmp": [],
-            "Simplicity": [],
-            "RISK_AT_0.3": [],
-            "RISK_AT_0.6": [],
-            "RISK_AT_0.9": [],
-            "RISK_A_0.3": [],
-            "RISK_A_0.6": [],
-            "RISK_A_0.9": [],
+        Args:
+            result_name (str): The name used to store the results.
+        """
+        self.unfiltered_log = None  # Log used for comparison
+        self.results = self.init_dict()  # Dictionary to store results
+        self.basename_orig = ''  # Original file basename
+        self.result_path = con.PATH_RESULTS  # Directory to save results
+        self.result_name = result_name  # Name for the results file
+
+    @staticmethod
+    def init_dict():
+        """
+        Initializes the result dictionary with predefined keys.
+
+        Returns:
+            dict: A dictionary containing measurement categories.
+        """
+        results_dict = {
+            "Z": [], "dT": [], "Fitness": [], "Fitness_ref": [],
+            "Precision": [], "Precision_ref": [], "Generality": [], "Generality_ref": [], "Simplicity": []
         }
+        risk_at = "RISK_AT_"
+        risk_a = "RISK_A_"
+
+        # Add risk categories based on constants
+        for risk in con.RISK_POINTS_ABSOLUTE | con.RISK_POINTS_RELATIVE:
+            results_dict[risk_at + str(risk)] = []
+            results_dict[risk_a + str(risk)] = []
+        return results_dict
 
     def set_unfiltered_log(self, directory, basename):
+        """
+        Loads the original (unfiltered) event log.
+
+        Args:
+            directory (str): Directory containing the log file.
+            basename (str): Name of the log file.
+        """
         path = os.path.join(directory, basename)
-        log = compute.import_csv(path)
-        self.unfiltered_log = log
+        self.unfiltered_log = utils.import_csv(path)
         self.basename_orig = basename
 
-    def fitness(self, event_log, net, im, fm):
-        fitness = pm4py.fitness_alignments(event_log, net, im, fm, multi_processing=True)
-        # print(f"fitness: {fitness}")
-        return fitness['log_fitness']
+    @staticmethod
+    def fitness(event_log, net, im, fm):
+        """
+        Computes the fitness metric of a process model.
 
-    def simplicity(self, net, im, fm):
-        simplicity = pm4py.simplicity_petri_net(net, im, fm)
-        # print(f"simplicity: {simplicity}")
-        return simplicity
+        Args:
+            event_log: The event log.
+            net: The Petri net.
+            im: Initial marking.
+            fm: Final marking.
 
-    def precision(self, event_log, net, im, fm):
-        precision = pm4py.precision_alignments(event_log, net, im, fm, multi_processing=True)
-        # print(f"Precision: {precision}")
-        return precision
+        Returns:
+            float: The fitness score.
+        """
+        if con.FITNESS_ALIGNMENT:
+            return pm4py.fitness_alignments(event_log, net, im, fm, multi_processing=con.PM4PY_MULTIPROCESSING)[
+                'log_fitness']
+        return pm4py.fitness_token_based_replay(event_log, net, im, fm)['log_fitness']
 
-    def generality(self, log, net, im, fm):
-        generality = pm4py.generalization_tbr(log, net, im, fm)
-        # print(f"Generality: {generality}")
-        return generality
+    @staticmethod
+    def simplicity(net, im, fm):
+        """
+        Computes the simplicity metric of a process model.
 
-    def __metrics_utility_log(self, net, im, fm, log, z_val, dt_val):
-        self.results["Z"].append(z_val)
-        self.results["dT"].append(dt_val)
-        with ProcessPoolExecutor() as executor:
-            sim = executor.submit(self.simplicity, net, im, fm)
-            gen = executor.submit(self.generality, log, net, im, fm)
-            fit = executor.submit(self.fitness, log, net, im, fm)
-            prec = executor.submit(self.precision, log, net, im, fm)
-            #
+        Args:
+            net: The Petri net.
+            im: Initial marking.
+            fm: Final marking.
 
-            if self.unfiltered_log is not None:
-                fit_cmp = executor.submit(self.fitness, self.unfiltered_log, net, im, fm)
-                gen_cmp = executor.submit(self.generality, self.unfiltered_log, net, im, fm)
-                prec_cmp = executor.submit(self.precision, self.unfiltered_log, net, im, fm)
+        Returns:
+            float: The simplicity score.
+        """
+        return pm4py.simplicity_petri_net(net, im, fm)
 
-                fit = fit.result()
-                gen = gen.result()
-                prec = prec.result()
+    @staticmethod
+    def precision(event_log, net, im, fm):
+        """
+        Computes the precision metric of a process model.
 
-                self.results['Fitness_cmp'].append(fit_cmp.result())
-                self.results["Generality_cmp"].append(gen_cmp.result())
-                self.results['Precision_cmp'].append(prec_cmp.result())
-            else:
-                fit = fit.result()
-                gen = gen.result()
-                prec = prec.result()
-                self.results['Fitness_cmp'].append(fit)
-                self.results["Generality_cmp"].append(gen)
-                self.results['Precision_cmp'].append(prec)
+        Args:
+            event_log: The event log.
+            net: The Petri net.
+            im: Initial marking.
+            fm: Final marking.
 
-            self.results['Simplicity'].append(sim.result())
-            self.results['Fitness'].append(fit)
-            self.results['Precision'].append(prec)
-            self.results['Generality'].append(gen)
+        Returns:
+            float: The precision score.
+        """
+        if con.PRECISION_ALIGNEMNT:
+            return pm4py.precision_alignments(event_log, net, im, fm, multi_processing=con.PM4PY_MULTIPROCESSING)
+        return pm4py.precision_token_based_replay(event_log, net, im, fm)
+
+    @staticmethod
+    def generality(log, net, im, fm):
+        """
+        Computes the generality metric of a process model.
+
+        Args:
+            log: The event log.
+            net: The Petri net.
+            im: Initial marking.
+            fm: Final marking.
+
+        Returns:
+            float: The generality score.
+        """
+        return pm4py.generalization_tbr(log, net, im, fm)
+
+    def __metrics_utility_log(self, net, im, fm, log, ):
+        if con.MODEL_QUALITY_MULTIPROCESSING:
+            with (ProcessPoolExecutor() as executor):
+                # Measure simplicity as it does not depend on the quality
+                sim = executor.submit(self.simplicity, net, im, fm)
+                if con.MODEL_QUALITY_EVALUATION:
+                    # Submit jobs for executor
+                    fit = executor.submit(self.fitness, log, net, im, fm)
+                    prec = executor.submit(self.precision, log, net, im, fm)
+                    gen = executor.submit(self.generality, log, net, im, fm)
+
+                    # add to result dict
+                    self.results["Fitness"].append(fit.result())
+                    self.results["Precision"].append(prec.result())
+                    self.results["Generality"].append(gen.result())
+
+                # case of Model Quality
+                if con.REF_MODEL_QUALITY_EVALUATION and self.unfiltered_log is None and con.MODEL_QUALITY_EVALUATION:
+                    # add the last entry as it refers to the unfiltered log,
+                    # only possible if model quality shall be measured
+                    self.results["Fitness_ref"].append(self.results["Fitness"][-1])
+                    self.results["Precision_ref"].append(self.results["Precision"][-1])
+                    self.results["Generality_ref"].append(self.results["Generality"][-1])
+
+                # reference model quality with unfiltered log
+                elif con.REF_MODEL_QUALITY_EVALUATION and self.unfiltered_log is not None:
+                    # use unfiltererd log for Calculation
+                    fit = executor.submit(self.fitness, self.unfiltered_log, net, im, fm)
+                    prec = executor.submit(self.precision, self.unfiltered_log, net, im, fm)
+                    gen = executor.submit(self.generality, self.unfiltered_log, net, im, fm)
+
+                    self.results["Precision_ref"].append(prec.result())
+                    self.results["Generality_ref"].append(gen.result())
+                    self.results["Fitness_ref"].append(fit.result())
+
+                # this case happens usually at the original models where model quality is disabled but no unfiltered
+                # log is set
+                elif con.REF_MODEL_QUALITY_EVALUATION:
+                    fit = executor.submit(self.fitness, log, net, im, fm)
+                    prec = executor.submit(self.precision, log, net, im, fm)
+                    gen = executor.submit(self.generality, log, net, im, fm)
+
+                    fit = fit.result()
+                    prec = prec.result()
+                    gen = gen.result()
+
+                    # add to result dict
+                    self.results["Fitness_ref"].append(fit)
+                    self.results["Precision_ref"].append(prec)
+                    self.results["Generality_ref"].append(gen)
+
+                # add to result dict
+                self.results["Simplicity"].append(sim.result())
+        else:
+            # calc simplicity and add to results
+            self.results["Simplicity"].append(self.simplicity(net, im, fm))
+
+            # case of Model Quality
+            if con.MODEL_QUALITY_EVALUATION:
+                self.results["Fitness"].append(self.fitness(log, net, im, fm))
+                self.results["Precision"].append(self.fitness(log, net, im, fm))
+                self.results["Generality"].append(self.fitness(log, net, im, fm))
+
+            # Case of reference Model Quality with no unfiltered event log,
+            # already measured model quality allows for shortcut
+            if con.REF_MODEL_QUALITY_EVALUATION and self.unfiltered_log is None and con.MODEL_QUALITY_EVALUATION:
+                # add the last entry as it refers to the unfiltered log
+                self.results["Fitness_ref"].append(self.results["Fitness"][-1])
+                self.results["Precision_ref"].append(self.results["Precision"][-1])
+                self.results["Generality_ref"].append(self.results["Generality"][-1])
+
+            # reference model quality with unfiltered log
+            elif con.REF_MODEL_QUALITY_EVALUATION and self.unfiltered_log is not None:
+                # use unfiltererd log for Calculation
+                self.results["Precision_ref"].append(self.precision(self.unfiltered_log, net, im, fm))
+                self.results["Generality_ref"].append(self.generality(self.unfiltered_log, net, im, fm))
+                self.results["Fitness_ref"].append(self.fitness(self.unfiltered_log, net, im, fm))
+
+            elif con.REF_MODEL_QUALITY_EVALUATION:
+                # this case happens usually at the original models where model quality is disabled but no unfiltered log
+                # is set
+                self.results["Fitness_ref"].append(self.fitness(log, net, im, fm))
+                self.results["Precision_ref"].append(self.fitness(log, net, im, fm))
+                self.results["Generality_ref"].append(self.fitness(log, net, im, fm))
 
     def __metrics_privacy_file(self, path: str, file: str):
-        path, file = csv2auto(path + "/", file, constants.PATH_TMP)
+        path, file = csv2auto(path + "/", file, con.PATH_TMP)
         with ProcessPoolExecutor() as executor:
             risk_at = executor.submit(risk_re_ident_quant, path + "/", file, projection='A')
             risk_a = executor.submit(risk_re_ident_quant, path + "/", file, projection='E')
             risk_at = risk_at.result()
             risk_a = risk_a.result()
-        self.results['RISK_AT_0.3'].append(risk_at[0][1])
-        self.results['RISK_AT_0.6'].append(risk_at[1][1])
-        self.results['RISK_AT_0.9'].append(risk_at[2][1])
 
-        self.results['RISK_A_0.3'].append(risk_a[0][1])
-        self.results['RISK_A_0.6'].append(risk_a[1][1])
-        self.results['RISK_A_0.9'].append(risk_a[2][1])
+        for i, rel in enumerate(con.RISK_POINTS_RELATIVE):
+            self.results['RISK_AT_' + str(rel)].append(risk_at[0][i][1])
+            self.results['RISK_A_' + str(rel)].append(risk_a[0][i][1])
+        for i, r in enumerate(con.RISK_POINTS_ABSOLUTE):
+            self.results['RISK_AT_' + str(r)].append(risk_at[1][i][1])
+            self.results['RISK_A_' + str(r)].append(risk_a[1][i][1])
 
     def comp_qualities_of_file(self, path, file, z_val, dt_val):
         """
@@ -136,59 +237,69 @@ class Measurement:
             file (str): Name of the event log CSV file.
             z_val (int): z-anonymity value.
             dt_val (str): Delta threshold for anonymization.
-            quasi_identifiers (list): List of quasi-identifiers used for filtering (default is ["activity"]).
         """
-        # utilize metrics for privacy on log
-        self.__metrics_privacy_file(path, file)
+        print(f"\nMeasuring file: {file}")
 
-        # utilize metrics for privacy
-        file_path = os.path.join(path, file)
+        if con.RISK_EVALUATION or con.MODEL_QUALITY_EVALUATION or con.REF_MODEL_QUALITY_EVALUATION:
+            self.results["Z"].append(z_val)
+            self.results["dT"].append(dt_val)
+
+        # utilize metrics for privacy on log
+        if con.RISK_EVALUATION:
+            self.__metrics_privacy_file(path, file)
 
         # import event log into pandas df
-        log_df = compute.import_csv(file_path)
-        # path for corresponding petri net
-        p = file_path.removesuffix(".csv") + ".pnml"
+        file_path = os.path.join(path, file)
+        log_df = utils.import_csv(file_path)
+
         # discover petri net
-        net, im, fm = pm4py.read_pnml(p)
+        net, im, fm = pm4py.discover_petri_net_inductive(log_df, multi_processing=True)
+
+        # safe to .pnml if wanted
+        if con.SAVE_PETRI_NETS:
+            # path for corresponding petri net
+            p = file_path.removesuffix(".csv") + ".pnml"
+            # write pnml file
+            pm4py.write_pnml(net, im, fm, p)
 
         # utilize metrics for utility (quality dimensions)
-        self.__metrics_utility_log(net, im, fm, log_df, z_val, dt_val)
-        self.write_to_csv()
+        if con.MODEL_QUALITY_EVALUATION or con.REF_MODEL_QUALITY_EVALUATION:
+            self.__metrics_utility_log(net, im, fm, log_df)
 
-    def __set_dict(self, dict):
-        self.results = dict
+        # print to CSV if there is at least one row at least containing Z
+        if self.results["Z"]:
+            self.write_to_csv()
+
+    def __set_dict(self, new_dict):
+        self.results = new_dict
 
     def write_to_csv(self):
         """
-            Writes member hashmap into a csv-file at the path provided at construction.
-
-            basename: name of the csv file
-            """
+        Writes the measurement results to a CSV file.
+        """
         try:
             filtered_hashmap = self.sort_dict_according_to_z()
-            # only consider keys with value-list-size greater 0
-            # Sicherstellen, dass alle Listen in der Hashmap die gleiche Länge haben
-            lengths = [len(v) for v in filtered_hashmap.values()]
-            if len(set(lengths)) > 1:
-                raise ValueError("Entries arent equal long!")
-            print(filtered_hashmap)
-            # Schreiben der Hashmap in die CSV-Datei
             with open(f"{self.result_path}/{self.result_name}.csv", mode='w', newline='', encoding='utf-8') as csv_file:
                 writer = csv.DictWriter(csv_file, fieldnames=filtered_hashmap.keys())
                 writer.writeheader()
                 rows = [dict(zip(filtered_hashmap.keys(), row)) for row in zip(*filtered_hashmap.values())]
                 writer.writerows(rows)
-
         except Exception as e:
             print(f"Error while writing hashmap to csv file: {e}")
 
     def clear(self):
+        """
+        Clear the result hashmap and init with new default dict
+        :return:
+        """
+        helper = self.results.copy()
         self.results.clear()
         self.results = self.init_dict()
+        return helper
 
     def sort_dict_according_to_z(self):
         filtered_hashmap = {k: v for k, v in self.results.items() if len(v) > 0}
-        sorted_indices = sorted(range(len(filtered_hashmap["Z"])), key=lambda i: filtered_hashmap["Z"][i])
+        sorted_indices = sorted(range(len(filtered_hashmap["Z"])), key=lambda i: int(filtered_hashmap["Z"][i]))
         filtered_hashmap = {key: [value[i] for i in sorted_indices] for key, value in filtered_hashmap.items()}
         return filtered_hashmap
 
@@ -216,132 +327,83 @@ class Measurement:
             raise Exception(f"Error while reading hashmap from csv file: {e}")
 
 
-def visualize_petri(net, im, fm):
-    gviz_petri = pn_visualizer.apply(net, im, fm)
-    pn_visualizer.view(gviz_petri)
-
-
-def visualize_process_tree(tree):
-    gviz_tree = pt_visualizer.apply(tree)
-    pt_visualizer.view(gviz_tree)
-
-
-def traverse_and_build_petri_nets(path):
-    for (parent, dirs, files) in os.walk(path):
-        for file in files:
-            path = os.path.join(parent, file)
-            if path.endswith(".csv"):
-                if os.path.exists(path.removesuffix(".csv") + '.pnml'):
-                    continue
-                try:
-                    log = compute.import_csv(str(path))
-                    # pandas.to_datetime(log['timestamp'], utc=True)
-                    net, im, fm = pm4py.discover_petri_net_inductive(log, multi_processing=True)
-                    pm4py.write_pnml(net, im, fm, str(path.removesuffix(".csv")))
-                except pandas.errors.ParserError as e:
-                    print(e)
-                except Exception as e:
-                    print(e)
-
-
 def traverse_and_measure(directory: str, abstracted: bool):
     """
+    Traverses a directory and evaluates the quality of process models discovered from event logs.
+
     Args:
-    :param directory: directory to be traversed, dont't
-    :param abstracted: True if only time_abstracted files should be considered, else False
-    :return:
+        directory (str): The directory to traverse.
+        abstracted (bool): Whether to consider only time-abstracted logs.
     """
-
     for entry in os.listdir(directory):
-        # entry in a directory, should include results_filtering_classic /improved and the original file as well as
-        # an abstracted one (if necessary) and a petri net for every file
         full_path = os.path.join(directory, entry)
-        # if os.path.isfile(full_path):
         if os.path.isdir(full_path):
-            with tqdm(total=(count_csv_files(directory) - 1) / 4,
-                      desc=os.path.basename(directory) if not abstracted else os.path.basename(directory)+'_abstracted',
+            with tqdm(total=(count_csv_files(directory) - 2) / 4, desc=os.path.basename(directory),
                       unit='file') as pbar:
-                # prepare Measurement object
-                # prepare file path to csv file
-                # distinguish between abstracted (generalized timestamps) files and `normal' ones
-                if abstracted:
-                    b_name = os.path.basename(directory).removesuffix('.csv') + constants.ABSTRACTED_NAME_SUFFIX
-                else:
-                    b_name = str(os.path.basename(directory)).removesuffix(".csv")
-                basename = b_name + ".csv"
-                ms = Measurement(os.path.join(os.getcwd(), "tmp/"), b_name + str(entry))
+                basename = os.path.basename(directory).removesuffix('.csv') + (
+                    con.ABSTRACTED_NAME_SUFFIX if abstracted else '')
+                ms = Measurement(basename + str(entry))
 
-                # Compute qualitites of unfiltered / base event log
+                # compute qualities of original log
+                ms.comp_qualities_of_file(directory, basename + ".csv", 0, "base")
 
-                ms.comp_qualities_of_file(directory, basename, 0, "base")
+                # update pbar
                 pbar.update(1)
-                ms.set_unfiltered_log(directory, basename)
-                # measure filtered logs and nets
-                measure_other_nets(full_path, ms, abstracted, pbar)
 
-                # write results dict to csv file
-                ms.write_to_csv()
+                # set unfiltered log in order to measure Reference Model Quality
+                ms.set_unfiltered_log(directory, basename + ".csv")
+
+                # measure all other proces models
+                measure_other_nets(full_path, ms, abstracted, pbar)
+                if ms.results["Z"]:
+                    ms.write_to_csv()
 
 
 def traverse(path):
-
-    # ProcessPoolExecutor für parallele Ausführung
-    with ProcessPoolExecutor() as executor:
-
-        futures = []
-        for entry in os.listdir(path):
-            curr = os.path.join(path, entry)
-            if os.path.isdir(curr):
-                # Task zur Verarbeitung des Verzeichnisses parallel hinzufügen
-                futures.append(executor.submit(traverse_and_measure, curr, True))
-                futures.append(executor.submit(traverse_and_measure, curr, False))
-
-        # Wait for every task
-        for future in futures:
-            future.result()
+    """
+    Traverse the path directory and kick off evaluation algorithm.
+    :param path: directory to traverse
+    """
+    for entry in os.listdir(path):
+        curr = os.path.join(path, entry)
+        if os.path.isdir(curr):
+            if con.ABSTRACT_TIMESTAMPS_EVALUATION:
+                traverse_and_measure(curr, True)
+            if con.USUAL_TIMESTAMP_EVALUATION:
+                traverse_and_measure(curr, False)
 
 
-def measure_other_nets(full_path, ms, abstracted: bool, pbar):
-    for entry in os.listdir(str(full_path)):
-        p = os.path.join(full_path, entry)
+def measure_other_nets(filter_dir, ms, abstracted: bool, pbar):
+    """
+    Evaluate all other filtered event logs in directory filter_dir.
+    :param filter_dir: Directory to evaluate
+    :param ms: Measurement object
+    :param abstracted: boolean indicating whether to traverse abstracted files
+    :param pbar: progress bar object
+    """
+    for entry in os.listdir(str(filter_dir)):
+        p = os.path.join(filter_dir, entry)
         if os.path.isfile(p) and os.path.basename(p).endswith(".csv"):
-            if abstracted and not entry.__contains__(constants.ABSTRACTED_NAME_SUFFIX):
+            if abstracted and not entry.__contains__(con.ABSTRACTED_NAME_SUFFIX):
                 continue
-            elif not abstracted and entry.__contains__(constants.ABSTRACTED_NAME_SUFFIX):
+            elif not abstracted and entry.__contains__(con.ABSTRACTED_NAME_SUFFIX):
                 continue
-            curr_path = os.path.join(full_path, entry)
+            curr_path = os.path.join(filter_dir, entry)
             basename = os.path.basename(curr_path).removesuffix(".csv")
 
-            number, prefix, duration = compute.extract_number_and_prefix(basename)
-            ms.comp_qualities_of_file(full_path, entry, number, str(duration))
+            number, prefix, duration = utils.extract_number_and_prefix(basename)
+            ms.comp_qualities_of_file(filter_dir, entry, number, str(duration))
             pbar.update(1)
 
 
 def count_csv_files(path: str):
-    count = 0
-    for _, _, files in os.walk(path):
-        for file in files:
-            if file.endswith('.csv'):
-                count += 1
-    return count
+    """
+    Counts the number of CSV files in a directory.
 
+    Args:
+        path (str): The directory path.
 
-if __name__ == "__main__":
-
-    directory = './results/Hospital_log/Hospital_log.csv'
-    # log = compute.import_csv(directory)
-    #
-    # net, im, fm = pm4py.discover_petri_net_inductive(log, multi_processing=True)
-    # pm4py.view_petri_net(net, im, fm)
-
-
-    # traverse_and_build_petri_nets(directory)
-    # traverse()
-    # with ProcessPoolExecutor() as executor:
-    #     futures = [
-    #         executor.submit(traverse_and_measure, directory, False),
-    #                executor.submit(traverse_and_measure, directory, True)
-    #                ]
-
-    #     for f in futures:
-    #         f.result()
+    Returns:
+        int: The number of CSV files.
+    """
+    return sum(1 for _, _, files in os.walk(path) for file in files if file.endswith('.csv'))

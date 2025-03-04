@@ -1,10 +1,12 @@
 import os
+import sys
+
+import pm4py
 
 import filtering as fi
-import measurement as ms
-import pathlib
 import abstract_timestamps as cp
-import visualize as vi
+import measurement as ms
+import constants as cons
 
 
 def main():
@@ -15,32 +17,18 @@ def main():
     Results can be found in /results_csv
     :return:
     """
-
-    dir = os.getcwd()
-    base_folder = os.path.join(dir, 'data_work/')
+    # set recursion limit for hard computation tasks (expected)
+    sys.setrecursionlimit(5000)
     # Presume there are filtered logs already in the base folder
     # Filter log for various z and ts
-    fi.traverse_and_filter(base_folder, 0)
+    fi.traverse_and_filter(cons.PATH_DATA)
     # abstract every existing csv file
-    cp.abstract_timestamps(base_folder)
-
-    # build a petri net for every csv file
-    ms.traverse_and_build_petri_nets(base_folder)
+    if cons.ABSTRACT_TIMESTAMPS_EVALUATION:
+        cp.abstract_timestamps(cons.PATH_DATA)
 
     # lastly traverse everything and measure what u can
-    ms.traverse(base_folder)
-
-    # base = "/home/fabian/Github/Bachelor_thesis_z_filter/results_csv/"
-    # visualization(base)
+    ms.traverse(cons.PATH_DATA)
 
 
-def visualization(base):
-    measure = ms.Measurement("")
-
-    for file in os.listdir(base):
-        try:
-            measure.read_from_csv(os.path.join(base, file))
-            vi.visualize_dict(measure.results, file)
-        except Exception as e:
-            print(f"Sth went wrong: {e}")
-main()
+if __name__ == "__main__":
+    main()

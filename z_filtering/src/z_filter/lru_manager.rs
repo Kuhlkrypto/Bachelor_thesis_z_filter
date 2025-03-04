@@ -6,44 +6,57 @@ use chrono::{DateTime, Duration, Utc};
 use logfile_parser::parsing_structures::event_sourced::EventSource;
 use std::collections::{HashMap, VecDeque};
 
+
+/// Manages a Least Recently Used (LRU) cache for tracking user activity based on attributes
 #[derive(Debug, Clone)]
 pub struct LruManager {
-    cache: HashMap<Attribute, VecDeque<LRUEntry>>, // Maps each attribute to its LRU list
-    users: HashMap<Attribute, u32>,
-    max_users: usize, // z-value: max users before output
-    max_age: Duration, // ∆t: maximum age for LRU entries
-    zfiltering_method: ZFilteringMethod,
+    cache: HashMap<Attribute, VecDeque<LRUEntry>>, // Maps each attribute to its corresponding LRU list
+    users: HashMap<Attribute, u32>, // Tracks the count of users per attribute
+    max_users: usize, // Maximum number of users before outputting an event (z-value threshold)
+    max_age: Duration, // Maximum allowed age for an LRU entry before eviction (∆t threshold)
+    zfiltering_method: ZFilteringMethod, // Defines the filtering strategy used
 }
 
 impl LruManager {
+    /// Creates a new LRU Manager object
     pub fn new(max_users: usize, max_age: Duration, filter: ZFilteringMethod) -> Self {
         Self { cache: HashMap::new(), users: HashMap::new(), max_users, max_age, zfiltering_method: filter }
     }
 
-
+    /// Initializes LRU Manager from configuration settings
     pub fn from(config: Config, filter: ZFilteringMethod) -> Self {
         Self::new(config.max_users, config.max_age, filter)
     }
 
+    /// Processes an incoming event and determines if it should be outputted.
     pub fn process(&mut self, case: &String, activity: &String, timestamp: &DateTime<Utc>, source: &Vec<String>) -> bool {
-        //check whether attribute is in hashmap, create a new entry if not
+        // Get or create LRU queue for the activity
         let lru = self.cache.entry(Attribute::new(activity)).or_insert(VecDeque::new());
+        // retrieve how much users already shared this activity
         let users = self.users.entry(Attribute::new(activity)).or_insert(0);
+
+        // match filtering method
         match self.zfiltering_method {
-            ZFilteringMethod::ClassicZfilter => {
+            ZFilteringMethod::BasicZfilter => { // basic filtering case
+                // check whether there are enough users in the lru to publish this event
                 Self::check_user(lru, users, case, timestamp, source);
+                //evict old users
                 Self::evict_old_users(lru, users, timestamp, &self.max_age);
+                // publish if at least z users share the attribute
                 lru.len() >= self.max_users
             }
-            ZFilteringMethod::ImprovedZfilter => {
-                Self::check_user_improved(lru, users, case, timestamp, source);
-                Self::evict_old_users_improved(lru, users, timestamp, &self.max_age);
+            ZFilteringMethod::BalancedZfilter => { // balanced case
+                Self::check_user_balanced(lru, users, case, timestamp, source);
+                // evict old users
+                Self::evict_old_users_balanced(lru, users, timestamp, &self.max_age);
+                // publish if at least z users share the attribute
                 *users as usize >= self.max_users
             }
         }
     }
 
-    fn check_user_improved(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, user: &String, timestamp: &DateTime<Utc>, source: &Vec<String>) {
+    /// Checks if a user already exists in the LRU list and adds a new entry if not (for balanced filtering)
+    fn check_user_balanced(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, user: &String, timestamp: &DateTime<Utc>, source: &Vec<String>) {
         //Improved Version of check user, all entries have to be stored in this Version until they are released (if)
         if lru.iter().any(|lru_entry| { lru_entry.user == *user }) {
             //user already exists in lru_entry
@@ -56,6 +69,8 @@ impl LruManager {
             *num_users += 1;
         }
     }
+
+    /// Checks if a user exists, updates timestamp if found, otherwise adds a new entry. (for basic filtering)
     fn check_user(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, user: &String, timestamp: &DateTime<Utc>, source: &Vec<String>) {
         //check if user already exists for the attribute
         if let Some(pos) = lru.iter().position(|entry| { entry.user == *user }) {
@@ -73,12 +88,14 @@ impl LruManager {
         }
     }
 
-    fn evict_old_users_improved(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, current_time: &DateTime<Utc>, max_age: &Duration) {
+    /// Removes expired users from the LRU list (balanced filtering)
+    fn evict_old_users_balanced(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, current_time: &DateTime<Utc>, max_age: &Duration) {
         while let Some(entry) = lru.back() {
             if *current_time - entry.timestamp > *max_age {
                 let user = entry.user.clone();
                 //remove oldest users if exceeding threshold
                 let _ = lru.pop_back();
+                // only decrease counter if there is no other event in lru containing the same user
                 if !lru.iter().any(|lruentry: &LRUEntry| { lruentry.user == user }) {
                     *num_users -= 1;
                 }
@@ -87,14 +104,16 @@ impl LruManager {
             }
         }
     }
+    /// Removes expired users from the LRU list (basic filtering)
     fn evict_old_users(lru: &mut VecDeque<LRUEntry>, num_users: &mut u32, current_time: &DateTime<Utc>, max_age: &Duration) {
         // nach der Logik des Programms treffen die Events in aufsteigender Zeit-Reihenfolge hier ein, daher muss man nur
         //von hinten alle entries entfernen die zu alt sind
         while let Some(entry) = lru.back() {
             if *current_time - entry.timestamp > *max_age {
                 //remove oldest users if exceeding threshold
-                //None is possible in the improved Variation
                 let _ = lru.pop_back();
+
+                // decrease counter
                 *num_users -= 1;
             } else {
                 break;
@@ -102,6 +121,7 @@ impl LruManager {
         }
     }
 
+    /// Releases all unpublished entries for a given activity (balanced filtering)
     pub fn release_other_entries(&mut self, activity: &String) -> VecDeque<LRUEntry> {
         let mut res = VecDeque::new();
         if let Some(lru) = self.cache.get_mut(&Attribute::new(activity)) {
@@ -109,6 +129,7 @@ impl LruManager {
                 if e.published {
                     break;
                 }
+                // mark as published so that it won't be published twice by happenstance
                 e.published = true;
                 //don't remove from list,
                 res.push_back(e.clone());
@@ -118,6 +139,8 @@ impl LruManager {
     }
 }
 
+
+/// Texss
 #[allow(unused_imports, dead_code)]
 mod tests {
     use super::*;
@@ -144,7 +167,7 @@ mod tests {
     #[test]
     fn test_distinct_attributes_distinct_user() {
         let res = init_event_sources_equal_user_activity(10);
-        let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::ClassicZfilter);
+        let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::BasicZfilter);
 
         for e in res {
             if let Some((case, activity, source, timestamp)) = e.disassemble() {
@@ -162,7 +185,7 @@ mod tests {
         for i in 0..10 {
             vec.push(init_event_source(i.to_string(), user.clone()));
         }
-        let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::ClassicZfilter);
+        let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::BasicZfilter);
         for e in vec {
             if let Some((case, activity, source, timestamp)) = e.disassemble() {
                 assert_eq!(lru.process(&case, &activity, &timestamp, &source), false);
@@ -177,7 +200,7 @@ mod tests {
         for i in 0..10 {
             vec.push(init_event_source(attribute.clone(), i.to_string()));
         }
-        let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::ClassicZfilter);
+        let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::BasicZfilter);
         for (i, e) in vec.into_iter().enumerate() {
             let result;
             if let Some((case, activity, source, timestamp)) = e.disassemble() {
@@ -201,7 +224,7 @@ mod tests {
         let user = String::from("test");
         vec.push(EventSource::new(user.clone(), Some(user.clone()), vec![], Utc::now()));
         vec.push(EventSource::new(String::from("lol"), Some(user.clone()), vec![], Utc::now() + Duration::hours(10)));
-        let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::ClassicZfilter);
+        let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::BasicZfilter);
         for e in vec.into_iter() {
             if let Some((case, activity, source, timestamp)) = e.disassemble() {
                 assert_eq!(lru.process(&case, &activity, &timestamp, &source), false)
@@ -216,8 +239,8 @@ mod tests {
         let mut vec = Vec::new();
         let user = String::from("test");
         vec.push(EventSource::new(user.clone(), Some(user.clone()), vec![], Utc::now()));
-        vec.push(EventSource::new(String::from("lol"), Some(user.clone()), vec![], Utc::now() + Duration::hours(9)));
-        let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::ClassicZfilter);
+        vec.push(EventSource::new(String::from("test1"), Some(user.clone()), vec![], Utc::now() + Duration::hours(10)));
+        let mut lru = LruManager::from(Config::new(Z, Duration::hours(10)), ZFilteringMethod::BasicZfilter);
         for (i, e) in vec.into_iter().enumerate() {
             if let Some((case, activity, source, timestamp)) = e.disassemble() {
                 let res = lru.process(&case, &activity, &timestamp, &source);
@@ -225,16 +248,19 @@ mod tests {
                 if i == 0 {
                     assert_eq!(res, false);
                 } else {
-                    assert_eq!(res, true);
+                    assert_eq!(res, false);
                 }
             }
         }
     }
 
 
+    /// Tests the basic filtering approach in the simulator for z=3 and a time parameter of 10 hours, it's expected
+    /// for that only four events pass the threshold
     #[tokio::test]
     async fn test_in_simulator() {
         let vec = vec![
+            //--------------------------------------------Source A
             EventSource::new(String::from("1"), Some(String::from("ac1")), vec!["A".to_string()], Utc::now()),
             EventSource::new(String::from("2"), Some(String::from("ac1")), vec!["A".to_string()], Utc::now()),
             EventSource::new(String::from("3"), Some(String::from("ac1")), vec!["A".to_string()], Utc::now()),
@@ -250,8 +276,9 @@ mod tests {
             EventSource::new(String::from("3"), Some(String::from("ac2")), vec!["B".to_string()], Utc::now()),
         ];
 
+        // create and run simulator
         match sourced_simulator::create_default_simulator(
-            ZFilter::new(LruManager::from(Config::new(3, Duration::hours(10)), ZFilteringMethod::ClassicZfilter), ZFilteringMethod::ClassicZfilter),
+            ZFilter::new(LruManager::from(Config::new(3, Duration::hours(10)), ZFilteringMethod::BasicZfilter), ZFilteringMethod::BasicZfilter),
             EventSourceLog::from(vec.clone())).await {
             Ok(simulator) => {
                 let res = simulator.run().await;

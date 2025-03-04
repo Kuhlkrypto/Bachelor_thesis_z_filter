@@ -5,6 +5,14 @@ This repository contains the code and resources for my Bachelor's thesis titled 
 The research focuses on as often activity filtering is suitable as a privacy-preserving technique in process discovery 
 while also enhancing or at least maintaining the utility of process models, thereby challenging a perception of privacy and utility being inherently opposing.
 
+This repository contains three applications: `data_parser`, `z_filtering`, and `evaluation`.
+
+The `data_parser` converts event logs from the XES format into CSV format.
+The `z_filtering` application filters event logs that have been processed by `data_parser`, based on specified relative and absolute z-values and a time parameter. These parameters can be set in the `evaluation/constants.py` file.
+
+The evaluation algorithm is the core component of this thesis. It automatically applies the z_filtering process to event logs according to specified settings and subsequently evaluates the quality of process models discovered using the filtered event logs.
+
+The following sections primarily describe how to run the evaluation algorithm using the executable versions of `data_parser` and `z_filtering`.
 ## 📌 Table of Contents
 - [Overview](#-overview)
 - [Project Structure](#-project-structure)

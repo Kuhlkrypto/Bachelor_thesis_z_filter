@@ -185,4 +185,8 @@ cython_debug/
 
 /data/data_csv/
 /data/
+/data_work
 /results_csv/
+
+/evaluation/visualize.py
+/evaluation/visualize_esp.py

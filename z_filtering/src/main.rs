@@ -160,7 +160,7 @@ async fn main() {
 
     // set result folder to the parent of the to be filtered file
     let mut result_folder = Path::new(&path_file);
-    result_folder = if result_folder.parent().is_none(){
+    result_folder = if result_folder.parent().is_some(){
         result_folder.parent().unwrap()
     } else {
         // if not possible use the same folder

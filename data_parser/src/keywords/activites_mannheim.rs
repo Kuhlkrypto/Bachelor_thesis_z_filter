@@ -7,7 +7,8 @@ pub struct DummyActivitesMannheim;
 
 impl KeywordProvider for DummyActivitesMannheim {
     fn keywords_source() -> Vec<String> {
-        vec!["lifecycle:transition".to_string()]
+        // use the same activity keyword for source
+        vec!["concept:name".to_string()]
     }
 
     fn keywords_activity() -> Vec<String> {

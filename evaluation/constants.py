@@ -19,11 +19,12 @@ PM4PY_MULTIPROCESSING: bool = True
 RISK_MULTIPROCESSING: bool = True
 MODEL_QUALITY_MULTIPROCESSING: bool = True
 
+
 # Temporary path used for storing files used by the re-identification risk evaluation
-PATH_TMP = os.path.join(os.getcwd(), "../tmp/")
-PATH_RESULTS = os.path.join(os.getcwd(), "../results")
-PATH_DATA = os.path.join(os.getcwd(), "../data_work/")
-PATH_FILTER_BINARY = os.path.join(os.getcwd(), "../target/release/z-anon-impl")
+PATH_TMP = os.path.join(os.getcwd(), "tmp/")
+PATH_RESULTS = os.path.join(os.getcwd(), "results/")
+PATH_DATA = os.path.join(os.getcwd(), "data_work/")
+PATH_FILTER_BINARY = os.path.join(os.getcwd(), "executables/z-anon-impl")
 
 # If set true the metrics are assessed using the alignment method, otherwise token based replay technique is used
 FITNESS_ALIGNMENT: bool = True

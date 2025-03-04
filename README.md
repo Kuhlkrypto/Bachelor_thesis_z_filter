@@ -10,14 +10,13 @@ while also enhancing or at least maintaining the utility of process models, ther
 - [Project Structure](#-project-structure)
 - [Installation](#-installation)
 - [Usage](#-usage)
-- [Results](#-results)
 - [Technologies Used](#-technologies-used)
 
 ## 📂 Project Structure
 ```
 ├── data_parser/          # Dataset and preprocessing scripts
 ├── evaluation/           # Source code of the project
-├── z_filter/             # Jupyter Notebooks for experiments
+├── z_filtering/             # Jupyter Notebooks for experiments
 ├── executables/          # Outputs, graphs, or evaluation results
 ├── Dockerfile            
 ├── requirements.txt      # requirements needed for the evaluation framework using python

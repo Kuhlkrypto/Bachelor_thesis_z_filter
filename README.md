@@ -54,12 +54,14 @@ docker build -t eval-pm4py .
 # make sure to have the directories data_xes, data_work, tmp and results in your current working directory
 # Place xes files you want to be assessed in data_xes directory
 # RUN
-docker run --rm \                                                                            
- -v $(pwd)/tmp:/app/tmp \
- -v $(pwd)/data_xes_/app/data_xes \
- -v $(pwd)/data_work:/app/data_work \
- -v $(pwd)/evaluation:/app/evaluation \
- -v $(pwd)/results:/app/results -eval-pm4py
+docker run --rm \
+    -v $(pwd)/tmp:/app/tmp \
+    -v $(pwd)/data_xes:/app/data_xes \
+    -v $(pwd)/data_work:/app/data_work \
+    -v $(pwd)/evaluation:/app/evaluation \
+    -v $(pwd)/results:/app/results \
+    eval-pm4py
+
  
 ```
 

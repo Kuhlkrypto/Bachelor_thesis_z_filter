@@ -22,12 +22,13 @@ The following sections primarily describe how to run the evaluation algorithm us
 
 ## 📂 Project Structure
 ```
-├── data_parser/          # Dataset and preprocessing scripts
-├── evaluation/           # Source code of the project
-├── z_filtering/             # Jupyter Notebooks for experiments
-├── executables/          # Outputs, graphs, or evaluation results
-├── Dockerfile            
-├── requirements.txt      # requirements needed for the evaluation framework using python
+├── data_parser/                # Dataset and preprocessing scripts
+├── evaluation/                 # Source code of the project
+├── z_filtering/                # application for the balanced and basic z filters
+├── executables/                # Outputs, graphs, or evaluation results
+├── Dockerfile                  # Dockerfile for setting up this project as docker image
+├── results_measurements.zip    # results of measurements
+├── requirements.txt            # requirements needed for the evaluation framework using python
 └── README.md      
 ```
 
@@ -44,6 +45,23 @@ pip install -r requirements.txt
 
 If you do not trust the provided executables in the executables folder, you will need to install the necessary technologies manually, including the Logfile-parser and Sourced-simulator, as well as Rust's Tokio framework. 
 To generate new executables you must modify the Cargo manifest to align with your local installation.
+
+Alternatively, you can use the Dockerfile to run this project.
+```bash
+# build dokcer container 
+docker build -t eval-pm4py .  
+
+# make sure to have the directories data_xes, data_work, tmp and results in your current working directory
+# Place xes files you want to be assessed in data_xes directory
+# RUN
+docker run --rm \                                                                            
+ -v $(pwd)/tmp:/app/tmp \
+ -v $(pwd)/data_xes_/app/data_xes \
+ -v $(pwd)/data_work:/app/data_work \
+ -v $(pwd)/evaluation:/app/evaluation \
+ -v $(pwd)/results:/app/results -eval-pm4py
+ 
+```
 
 ## 🚀 Usage
 If you want to reproduce the experiments and trust the executables in the `executables` folder, you can place the event logs you want to investigate into a directory called `data_xes`.
